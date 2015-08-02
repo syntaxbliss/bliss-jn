@@ -6,6 +6,12 @@ Object.prototype.toHex = function( size ) {
     return str.toUpperCase();
 }
 
+Object.prototype.toLength = function( size ) {
+    var str = this.toString();
+    while( str.length < size ) str = ' ' + str;
+    return str;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var FLAG_N = 0x80;
@@ -242,14 +248,16 @@ BlissJN.NES.M6502.prototype = {
                 address = ( (h << 8) | l ) & 0xffff;
             } break;
 
-            case ABX: { // TODO: page-crossing
+            case ABX: {
                 var l = this.fetch(), h = this.fetch();
                 address = ( ((h << 8) | l) + this.x ) & 0xffff;
+                if( l + this.x > 0xff ) this.ticks++;
             } break;
 
-            case ABY: { // TODO: page-crossing
+            case ABY: {
                 var l = this.fetch(), h = this.fetch();
                 address = ( ((h << 8) | l) + this.y ) & 0xffff;
+                if( l + this.y > 0xff ) this.ticks++;
             } break;
 
             case AXN: {
@@ -279,8 +287,14 @@ BlissJN.NES.M6502.prototype = {
                 address = ( (h << 8) | l ) & 0xffff;
             } break;
 
-            case IYN: // TODO: page-crossing
             case INY: {
+                var r = this.fetch();
+                var l = this.mmu.readByte( r ), h = this.mmu.readByte( (r + 1) & 0xff );
+                address = ( ((h << 8) | l) + this.y ) & 0xffff;
+                if( l + this.y > 0xff ) this.ticks++;
+            } break;
+
+            case IYN: {
                 var r = this.fetch();
                 var l = this.mmu.readByte( r ), h = this.mmu.readByte( (r + 1) & 0xff );
                 address = ( ((h << 8) | l) + this.y ) & 0xffff;
@@ -348,7 +362,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_C) !== FLAG_C ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -356,7 +373,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_C) === FLAG_C ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -364,7 +384,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_Z) === FLAG_Z ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -380,7 +403,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_Z) !== FLAG_Z ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -388,7 +414,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_N) !== FLAG_N ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -396,7 +425,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_N) === FLAG_N ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -404,7 +436,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_V) !== FLAG_V ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -412,7 +447,10 @@ BlissJN.NES.M6502.prototype = {
         var offset = this.getAddress( mode );
         if( (this.status & FLAG_V) === FLAG_V ) {
             if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.ticks++;
+            var before = ( this.pc >> 8 ) & 0xff;
             this.pc = ( this.pc + offset ) & 0xffff;
+            if( before !== ((this.pc >> 8) & 0xff) ) this.ticks++;
         }
     },
 
@@ -692,13 +730,16 @@ BlissJN.NES.M6502.prototype = {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.NES.M6502.Debugger = function( target ) {
-    this.target  = target;
-    this.context = null;
+    this.target     = target;
+    this.context    = null;
+    this.m6502Ticks = 0;
+    this.debugTicks = 0;
 };
 
 BlissJN.NES.M6502.Debugger.prototype = {
     trace : function( context, opcode ) {
         this.context = context;
+        this.m6502Ticks = this.context.ticks;
         var str = context.pc.toHex(4) + "  " + opcode.toHex(2) + " " + this.operands( OPCODE_MODE[opcode] ) + "  " + this.explain( opcode ) + this.registers();
         this.renderString( str );
     },
@@ -736,22 +777,12 @@ BlissJN.NES.M6502.Debugger.prototype = {
                 else str += '                       ';
             } break;
 
-            case ABX: { // TODO: page-crossing
+            case ABX: case AXN: {
                 var l = this.peek(1), h = this.peek(2), address = ( (h << 8) | l ) & 0xffff, disp = ( address + this.context.x ) & 0xffff;
                 str += '$' + address.toHex(4) + ',X @ ' + disp.toHex(4) + ' = ' + this.context.mmu.readByte( disp ).toHex(2) + '         ';
             } break;
 
-            case ABY: { // TODO: page-crossing
-                var l = this.peek(1), h = this.peek(2), address = ( (h << 8) | l ) & 0xffff, disp = ( address + this.context.y ) & 0xffff;
-                str += '$' + address.toHex(4) + ',Y @ ' + disp.toHex(4) + ' = ' + this.context.mmu.readByte( disp ).toHex(2) + '         ';
-            } break;
-
-            case AXN: {
-                var l = this.peek(1), h = this.peek(2), address = ( (h << 8) | l ) & 0xffff, disp = ( address + this.context.x ) & 0xffff;
-                str += '$' + address.toHex(4) + ',X @ ' + disp.toHex(4) + ' = ' + this.context.mmu.readByte( disp ).toHex(2) + '         ';
-            } break;
-
-            case AYN: {
+            case ABY: case AYN: {
                 var l = this.peek(1), h = this.peek(2), address = ( (h << 8) | l ) & 0xffff, disp = ( address + this.context.y ) & 0xffff;
                 str += '$' + address.toHex(4) + ',Y @ ' + disp.toHex(4) + ' = ' + this.context.mmu.readByte( disp ).toHex(2) + '         ';
             } break;
@@ -778,8 +809,7 @@ BlissJN.NES.M6502.Debugger.prototype = {
                 str += '($' + r.toHex(2) + ',X) @ ' + disp.toHex(2) + ' = ' + address.toHex(4) + ' = ' + data.toHex(2) + '    ';
             } break;
 
-            case IYN: // TODO: page-crossing
-            case INY: {
+            case INY: case IYN: {
                 var r = this.peek(1), l = this.context.mmu.readByte( r ), h = this.context.mmu.readByte( (r + 1) & 0xff );
                 var address = ( (h << 8) | l ) & 0xffff, disp = ( address + this.context.y ) & 0xffff, data = this.context.mmu.readByte( disp );
                 str += '($' + r.toHex(2) + '),Y = ' + address.toHex(4) + ' @ ' + disp.toHex(4) + ' = ' + data.toHex(2) + '  ';
@@ -814,12 +844,15 @@ BlissJN.NES.M6502.Debugger.prototype = {
     },
 
     registers : function() {
+        this.debugTicks += this.m6502Ticks * 3;
+        if( this.debugTicks >= 341 ) this.debugTicks -= 341;
         var a = [];
         a.push('A:' + this.context.a.toHex(2) );
         a.push('X:' + this.context.x.toHex(2) );
         a.push('Y:' + this.context.y.toHex(2) );
         a.push('P:' + this.context.status.toHex(2) );
         a.push('SP:' + this.context.sp.toHex(2) );
+        a.push('CYC:' + this.debugTicks.toLength(3) );
         return a.join(' ');
     },
 
