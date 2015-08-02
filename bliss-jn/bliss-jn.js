@@ -1,0 +1,566 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Object.prototype.toHex = function( size ) {
+    var str = this.toString( 16 );
+    while( str.length < size ) str = '0' + str;
+    return str.toUpperCase();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var FLAG_N = 0x80;
+var FLAG_V = 0x40;
+var FLAG_P = 0x20;
+var FLAG_B = 0x10;
+var FLAG_D = 0x8;
+var FLAG_I = 0x4;
+var FLAG_Z = 0x2;
+var FLAG_C = 0x1;
+
+var ZN_FLAGS = [
+//           0       1       2       3       4       5       6       7       8       9       a       b       c       d       e       f
+/* 0 */ FLAG_Z,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
+/* 1 */      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
+/* 2 */      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
+/* 3 */      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
+/* 4 */      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      3,      0,      0,      0,
+/* 5 */      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
+/* 6 */      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
+/* 7 */      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,
+/* 8 */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N,
+/* 9 */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N,
+/* a */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N,
+/* b */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N,
+/* c */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N,
+/* d */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N,
+/* e */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N,
+/* f */ FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N, FLAG_N
+];
+
+var ABS = 1;
+var ABX = 2;
+var ABY = 3;
+var AXN = 4;
+var AYN = 5;
+var IMM = 6;
+var IMP = 7;
+var IND = 8;
+var INX = 9;
+var INY = 10;
+var IYN = 11;
+var REL = 12;
+var ZEP = 13;
+var ZPX = 14;
+var ZPY = 15;
+
+var OPCODE_OPERATION = [
+//          0      1      2      3      4      5      6      7      8      9      a      b      c      d      e      f
+/* 0 */  null, 'ORA',  null,  null,  null, 'ORA',  null,  null, 'PHP', 'ORA',  null,  null,  null, 'ORA',  null,  null,
+/* 1 */ 'BPL', 'ORA',  null,  null,  null, 'ORA',  null,  null, 'CLC', 'ORA',  null,  null,  null, 'ORA',  null,  null,
+/* 2 */ 'JSR', 'AND', 'AND',  null, 'BIT',  null,  null,  null, 'PLP', 'AND',  null,  null, 'BIT', 'AND',  null,  null,
+/* 3 */ 'BMI', 'AND', 'AND',  null,  null,  null,  null,  null, 'SEC', 'AND',  null,  null,  null, 'AND',  null,  null,
+/* 4 */  null, 'EOR',  null,  null,  null, 'EOR',  null,  null, 'PHA', 'EOR',  null,  null, 'JMP', 'EOR',  null,  null,
+/* 5 */ 'BVC', 'EOR',  null,  null,  null, 'EOR',  null,  null,  null, 'EOR',  null,  null,  null, 'EOR',  null,  null,
+/* 6 */ 'RTS',  null,  null,  null,  null,  null,  null,  null, 'PLA',  null,  null,  null, 'JMP',  null,  null,  null,
+/* 7 */ 'BVS',  null,  null,  null,  null,  null,  null,  null, 'SEI',  null,  null,  null,  null,  null,  null,  null,
+/* 8 */  null, 'STA',  null,  null,  null, 'STA', 'STX',  null,  null,  null,  null,  null,  null, 'STA', 'STX',  null,
+/* 9 */ 'BCC', 'STA',  null,  null,  null, 'STA', 'STX',  null,  null, 'STA',  null,  null,  null, 'STA',  null,  null,
+/* a */  null, 'LDA', 'LDX',  null,  null, 'LDA', 'LDX',  null,  null, 'LDA',  null,  null,  null, 'LDA', 'LDX',  null,
+/* b */ 'BCS', 'LDA',  null,  null,  null, 'LDA', 'LDX',  null, 'CLV', 'LDA',  null,  null,  null, 'LDA', 'LDX',  null,
+/* c */  null, 'CMP',  null,  null,  null, 'CMP',  null,  null,  null, 'CMP',  null,  null,  null, 'CMP',  null,  null,
+/* d */ 'BNE', 'CMP',  null,  null,  null, 'CMP',  null,  null, 'CLD', 'CMP',  null,  null,  null, 'CMP',  null,  null,
+/* e */  null,  null,  null,  null,  null,  null,  null,  null,  null,  null, 'NOP',  null,  null,  null,  null,  null,
+/* f */ 'BEQ',  null,  null,  null,  null,  null,  null,  null, 'SED',  null,  null,  null,  null,  null,  null,  null
+];
+
+var OPCODE_MODE = [
+//         0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f
+/* 0 */ null,  INX, null, null, null,  ZEP, null, null,  IMP,  IMM, null, null, null,  ABS, null, null,
+/* 1 */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null,
+/* 2 */  ABS,  INX, null, null,  ZEP,  ZEP, null, null,  IMP,  IMM, null, null,  ABS,  ABS, null, null,
+/* 3 */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null,
+/* 4 */ null,  INX, null, null, null,  ZEP, null, null,  IMP,  IMM, null, null,  ABS,  ABS, null, null,
+/* 5 */  REL,  INY, null, null, null,  ZPX, null, null, null,  ABY, null, null, null,  ABX, null, null,
+/* 6 */  IMP, null, null, null, null, null, null, null,  IMP, null, null, null,  IND, null, null, null,
+/* 7 */  REL, null, null, null, null, null, null, null,  IMP, null, null, null, null, null, null, null,
+/* 8 */ null,  INX, null, null, null,  ZEP,  ZEP, null, null, null, null, null, null,  ABS,  ABS, null,
+/* 9 */  REL,  IYN, null, null, null,  ZPX,  ZPY, null, null,  AYN, null, null, null,  AXN, null, null,
+/* a */ null,  INX,  IMM, null, null,  ZEP,  ZEP, null, null,  IMM, null, null, null,  ABS,  ABS, null,
+/* b */  REL,  INY, null, null, null,  ZPX,  ZPY, null,  IMP,  ABY, null, null, null,  ABX,  ABY, null,
+/* c */ null,  INX, null, null, null,  ZEP, null, null, null,  IMM, null, null, null,  ABS, null, null,
+/* d */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null,
+/* e */ null, null, null, null, null, null, null, null, null, null,  IMP, null, null, null, null, null,
+/* f */  REL, null, null, null, null, null, null, null,  IMP, null, null, null, null, null, null, null
+];
+
+var OPCODE_CYCLES = [
+//      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+/* 0 */ 0, 6, 0, 0, 0, 3, 0, 0, 3, 2, 0, 0, 0, 4, 0, 0,
+/* 1 */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 4, 0, 0, 0, 4, 0, 0,
+/* 2 */ 6, 6, 0, 0, 3, 3, 0, 0, 4, 2, 0, 0, 4, 4, 0, 0,
+/* 3 */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 4, 0, 0, 0, 4, 0, 0,
+/* 4 */ 0, 6, 0, 0, 0, 3, 0, 0, 3, 2, 0, 0, 3, 4, 0, 0,
+/* 5 */ 2, 5, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0,
+/* 6 */ 6, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0,
+/* 7 */ 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
+/* 8 */ 0, 6, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 4, 4, 0,
+/* 9 */ 2, 6, 0, 0, 0, 4, 4, 0, 0, 5, 0, 0, 0, 5, 0, 0,
+/* a */ 0, 6, 2, 0, 0, 3, 3, 0, 0, 2, 0, 0, 0, 4, 4, 0,
+/* b */ 2, 5, 0, 0, 0, 4, 4, 0, 2, 4, 0, 0, 0, 4, 4, 0,
+/* c */ 0, 6, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 4, 0, 0,
+/* d */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 0, 0, 0, 0, 4, 0, 0,
+/* e */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0,
+/* f */ 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0
+];
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlissJN = function( args ) {
+    this.target = args.target;
+    this.nes    = new BlissJN.NES( args.gameData, args.target );
+}
+
+BlissJN.prototype = {}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlissJN.NES = function( data, target ) {
+    this.mmu   = new BlissJN.NES.MMU( data );
+    this.m6502 = new BlissJN.NES.M6502( this.mmu, target );
+    this.start();
+}
+
+BlissJN.NES.prototype = {
+    start : function() {
+        var cycles = 0;
+        for( var i = 0; i < 500; i++ ) {
+            var opcode = this.m6502.fetch();
+            var c = this.m6502.execute( opcode );
+            if( c === 0 ) throw "error: no se definieron los ciclos para el opcode < " + opcode.toHex(2) + " >";
+            cycles += c;
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlissJN.NES.MMU = function( data ) {
+    this.rom  = [];
+    this.vram = [];
+    this.sram = [];
+
+    for( var i = 0; i < 0x10000; i++ ) this.rom.push( 0x00 );
+    for( var i = 0; i < 0x4000; i++ ) this.vram.push( 0x00 );
+    for( var i = 0; i < 0x100; i++ ) this.sram.push( 0x00 );
+
+    this.allocate( data );
+}
+
+BlissJN.NES.MMU.prototype = {
+    allocate : function( data ) {
+        var romBanks = data[ 4 ];
+        var index = 0;
+        if( romBanks === 1 ) {
+            for( var i = 0; i < 0x4000; i++ ) this.rom[ 0x8000 + i ] = this.rom[ 0xc000 + i ] = data[ 16 + index++ ];
+        } else if( romBanks === 2 ) {
+            for( var i = 0; i < 0x8000; i++ ) this.rom[ 0x8000 + i ] = data[ 16 + index++ ];
+        } else {
+            throw "error: demasiados bancos de memoria PRG-ROM";
+        }
+        for( var i = 0; i < 0x2000; i++ ) this.vram[ i ] = data[ 16 + index++ ];
+    },
+
+    readByte : function( address ) {
+        return this.rom[ address ];
+    },
+
+    writeByte : function( address, value ) {
+        this.rom[ address ] = value;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlissJN.NES.M6502 = function( mmu, target ) {
+    this.debugger = new BlissJN.NES.M6502.Debugger( target );
+    this.mmu      = mmu;
+    this.pc       = 0xc000;
+    this.a        = 0x00;
+    this.x        = 0x00;
+    this.y        = 0x00;
+    this.sp       = 0xfd;
+    this.status   = 0x24;
+    this.ticks    = 0;
+}
+
+BlissJN.NES.M6502.prototype = {
+    getContext : function() {
+        return {
+            mmu    : this.mmu,
+            pc     : ( this.pc - 1 ) & 0xffff,
+            a      : this.a,
+            x      : this.x,
+            y      : this.y,
+            sp     : this.sp,
+            status : this.status,
+            ticks  : this.ticks
+        };
+    },
+
+    fetch : function() {
+        var address = this.pc;
+        this.pc = ( this.pc + 1 ) & 0xffff;
+        return this.mmu.readByte( address );
+    },
+
+    execute : function( opcode ) {
+        // FIXME
+        //console.log( opcode.toHex(2), this.pc.toHex(4) );
+        this.debugger.trace( this.getContext(), opcode );
+        this.ticks = 0;
+        var operation = OPCODE_OPERATION[ opcode ];
+        this[ operation ]( OPCODE_MODE[opcode] );
+        this.ticks += OPCODE_CYCLES[ opcode ];
+        return this.ticks;
+    },
+
+    stackPush : function( value ) {
+        this.mmu.writeByte( (this.sp | 0x0100) & 0xffff, value );
+        this.sp = ( this.sp - 1 ) & 0xff;
+    },
+
+    stackPop : function( value ) {
+        this.sp = ( this.sp + 1 ) & 0xff;
+        return this.mmu.readByte( (this.sp | 0x0100) & 0xffff );
+    },
+
+    getAddress : function( mode ) {
+        var address = null;
+
+        switch( mode ) {
+            case ABS: {
+                var l = this.fetch();
+                var h = this.fetch();
+                address = ( (h << 8) | l ) & 0xffff;
+            } break;
+
+            case IMM: {
+                address = this.pc;
+                this.pc = ( this.pc + 1 ) & 0xffff;
+            } break;
+
+            case IMP: {
+                address = this.pc;
+            } break;
+
+            case REL: {
+                address = this.fetch();
+            } break;
+
+            case ZEP: {
+                address = this.mmu.readByte( this.fetch() );
+            } break;
+
+            default: {
+                throw "error: < " + mode + " > no es un modo de direccionamiento valido";
+            } break;
+        };
+
+        return address;
+    },
+
+    AND : function( mode ) {
+        this.a &= this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.a ];
+    },
+
+    BCC : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_C) !== FLAG_C ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    BCS : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_C) === FLAG_C ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    BEQ : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_Z) === FLAG_Z ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    BIT : function( mode ) {
+        var mask = this.mmu.readByte( this.getAddress(mode) );
+        var r = ( this.a & mask ) & 0xff;
+        this.status &= ~( FLAG_Z | FLAG_V | FLAG_N );
+        if( r === 0 ) this.status |= FLAG_Z;
+        this.status |= ( mask & 0xc0 ) & 0xff;
+    },
+
+    BNE : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_Z) !== FLAG_Z ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    BPL : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_N) !== FLAG_N ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    BMI : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_N) === FLAG_N ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    BVC : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_V) !== FLAG_V ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    BVS : function( mode ) {
+        var offset = this.getAddress( mode );
+        if( (this.status & FLAG_V) === FLAG_V ) {
+            if( (offset & 0x80) === 0x80 ) offset = ( offset - 0x100 );
+            this.pc = ( this.pc + offset ) & 0xffff;
+        }
+    },
+
+    CLC : function( mode ) {
+        this.status &= ~FLAG_C;
+    },
+
+    CLD : function( mode ) {
+        this.status &= ~FLAG_D;
+    },
+
+    CLV : function( mode ) {
+        this.status &= ~FLAG_V;
+    },
+
+    CMP : function( mode ) {
+        var src = this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
+        if( this.a >= src ) this.status |= FLAG_C;
+        if( this.a === src ) this.status |= FLAG_Z;
+        if( (src & 0x80) === 0x80 ) this.status |= FLAG_N;
+    },
+
+    CPX : function( mode ) {
+        var src = this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
+        if( this.x >= src ) this.status |= FLAG_C;
+        if( this.x === src ) this.status |= FLAG_Z;
+        if( (src & 0x80) === 0x80 ) this.status |= FLAG_N;
+    },
+
+    CPY : function( mode ) {
+        var src = this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
+        if( this.y >= src ) this.status |= FLAG_C;
+        if( this.y === src ) this.status |= FLAG_Z;
+        if( (src & 0x80) === 0x80 ) this.status |= FLAG_N;
+    },
+
+    EOR : function( mode ) {
+        this.a ^= this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.a ];
+    },
+
+    JMP : function( mode ) {
+        this.pc = this.getAddress( mode );
+    },
+
+    JSR : function( mode ) {
+        var address = this.getAddress( mode );
+        var pc = ( this.pc - 1 ) & 0xffff;
+        this.stackPush( (pc >> 8) & 0xff );
+        this.stackPush( pc & 0xff );
+        this.pc = address;
+    },
+
+    LDA : function( mode ) {
+        this.a = this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.a ];
+    },
+
+    LDX : function( mode ) {
+        this.x = this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.x ];
+    },
+
+    LDY : function( mode ) {
+        this.y = this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.y ];
+    },
+
+    NOP : function( mode ) {},
+
+    ORA : function( mode ) {
+        this.a |= this.mmu.readByte( this.getAddress(mode) );
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.a ];
+    },
+
+    PHA : function( mode ) {
+        this.stackPush( this.a );
+    },
+
+    PHP : function( mode ) {
+        this.stackPush( (this.status | 0x30) & 0xff );
+    },
+
+    PLA : function( mode ) {
+        this.a = this.stackPop();
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.a ];
+    },
+
+    PLP : function( mode ) {
+        this.status = this.stackPop();
+        this.status &= ~FLAG_B;
+        this.status |= FLAG_P;
+    },
+
+    RTS : function( mode ) {
+        var l = this.stackPop();
+        var h = this.stackPop();
+        var address = ( (h << 8) | l ) & 0xffff;
+        this.pc = ( address + 1 ) & 0xffff;
+    },
+
+    SEC : function( mode ) {
+        this.status |= FLAG_C;
+    },
+
+    SED : function( mode ) {
+        this.status |= FLAG_D;
+    },
+
+    SEI : function( mode ) {
+        this.status |= FLAG_I;
+    },
+
+    STA : function( mode ) {
+        this.mmu.writeByte( this.getAddress(mode), this.a );
+    },
+
+    STX : function( mode ) {
+        this.mmu.writeByte( this.getAddress(mode), this.x );
+    },
+
+    STY : function( mode ) {
+        this.mmu.writeByte( this.getAddress(mode), this.y );
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlissJN.NES.M6502.Debugger = function( target ) {
+    this.target  = target;
+    this.context = null;
+};
+
+BlissJN.NES.M6502.Debugger.prototype = {
+    trace : function( context, opcode ) {
+        this.context = context;
+        var str = context.pc.toHex(4) + "  " + opcode.toHex(2) + " " + this.operands( OPCODE_MODE[opcode] ) + "  " + this.explain( opcode ) + this.registers();
+        this.renderString( str );
+    },
+
+    peek : function( n ) {
+        return this.context.mmu.readByte( (this.context.pc + n) & 0xffff );
+    },
+
+    operands : function( mode ) {
+        switch( mode ) {
+            case ABS: {
+                str = this.peek(1).toHex(2) + " " + this.peek(2).toHex(2);
+            } break;
+
+            case IMM: case REL: case ZEP: {
+                str = this.peek(1).toHex(2) + "   ";
+            } break;
+
+            case IMP: {
+                str = '     '
+            } break;
+        }
+        return str;
+    },
+
+    explain : function( opcode ) {
+        var name = OPCODE_OPERATION[ opcode ], mode = OPCODE_MODE[ opcode ], str = '';
+        str = name + ' ';
+        switch( mode ) {
+            case ABS: {
+                str += '$' + this.peek(2).toHex(2) + this.peek(1).toHex(2);
+                str += '                       ';
+            } break;
+
+            case IMM: {
+                str += '#$' + this.peek(1).toHex(2);
+                str += '                        ';
+            } break;
+
+            case IMP: {
+                str += '                            ';
+            } break;
+
+            case REL: {
+                var offset = this.peek(1);
+                str += '$' + ( (this.context.pc + 2 + offset) & 0xffff ).toHex(4);
+                str += '                       ';
+            } break;
+
+            case ZEP: {
+                str += '$' + this.peek(1).toHex(2) + " = " + this.context.mmu.readByte( this.peek(1) ).toHex(2);
+                str += '                    ';
+            } break;
+        }
+        return str;
+    },
+
+    registers : function() {
+        var a = [];
+        a.push('A:' + this.context.a.toHex(2) );
+        a.push('X:' + this.context.x.toHex(2) );
+        a.push('Y:' + this.context.y.toHex(2) );
+        a.push('P:' + this.context.status.toHex(2) );
+        a.push('SP:' + this.context.sp.toHex(2) );
+        return a.join(' ');
+    },
+
+    renderString : function( string ) {
+        var e = document.createElement('pre');
+        e.innerHTML = string;
+        this.target.appendChild( e );
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,9 @@
+body { padding: 8px; line-height: 14px; }
+
+pre {
+    font-family: 'DejaVu Sans Mono';
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    -moz-control-character-visibility: visible;
+}
