@@ -59,18 +59,18 @@ var OPCODE_OPERATION = [
 /* 1 */ 'BPL', 'ORA',  null,  null,  null, 'ORA',  null,  null, 'CLC', 'ORA',  null,  null,  null, 'ORA',  null,  null,
 /* 2 */ 'JSR', 'AND', 'AND',  null, 'BIT',  null,  null,  null, 'PLP', 'AND',  null,  null, 'BIT', 'AND',  null,  null,
 /* 3 */ 'BMI', 'AND', 'AND',  null,  null,  null,  null,  null, 'SEC', 'AND',  null,  null,  null, 'AND',  null,  null,
-/* 4 */  null, 'EOR',  null,  null,  null, 'EOR',  null,  null, 'PHA', 'EOR',  null,  null, 'JMP', 'EOR',  null,  null,
+/* 4 */ 'RTI', 'EOR',  null,  null,  null, 'EOR',  null,  null, 'PHA', 'EOR',  null,  null, 'JMP', 'EOR',  null,  null,
 /* 5 */ 'BVC', 'EOR',  null,  null,  null, 'EOR',  null,  null,  null, 'EOR',  null,  null,  null, 'EOR',  null,  null,
-/* 6 */ 'RTS',  null,  null,  null,  null,  null,  null,  null, 'PLA',  null,  null,  null, 'JMP',  null,  null,  null,
-/* 7 */ 'BVS',  null,  null,  null,  null,  null,  null,  null, 'SEI',  null,  null,  null,  null,  null,  null,  null,
-/* 8 */  null, 'STA',  null,  null,  null, 'STA', 'STX',  null,  null,  null,  null,  null,  null, 'STA', 'STX',  null,
-/* 9 */ 'BCC', 'STA',  null,  null,  null, 'STA', 'STX',  null,  null, 'STA',  null,  null,  null, 'STA',  null,  null,
-/* a */  null, 'LDA', 'LDX',  null,  null, 'LDA', 'LDX',  null,  null, 'LDA',  null,  null,  null, 'LDA', 'LDX',  null,
-/* b */ 'BCS', 'LDA',  null,  null,  null, 'LDA', 'LDX',  null, 'CLV', 'LDA',  null,  null,  null, 'LDA', 'LDX',  null,
-/* c */  null, 'CMP',  null,  null,  null, 'CMP',  null,  null,  null, 'CMP',  null,  null,  null, 'CMP',  null,  null,
+/* 6 */ 'RTS', 'ADC',  null,  null,  null, 'ADC',  null,  null, 'PLA', 'ADC',  null,  null, 'JMP', 'ADC',  null,  null,
+/* 7 */ 'BVS', 'ADC',  null,  null,  null, 'ADC',  null,  null, 'SEI', 'ADC',  null,  null,  null, 'ADC',  null,  null,
+/* 8 */  null, 'STA',  null,  null, 'STY', 'STA', 'STX',  null, 'DEY',  null, 'TXA',  null, 'STY', 'STA', 'STX',  null,
+/* 9 */ 'BCC', 'STA',  null,  null, 'STY', 'STA', 'STX',  null, 'TYA', 'STA', 'TXS',  null,  null, 'STA',  null,  null,
+/* a */ 'LDY', 'LDA', 'LDX',  null, 'LDY', 'LDA', 'LDX',  null, 'TAY', 'LDA', 'TAX',  null, 'LDY', 'LDA', 'LDX',  null,
+/* b */ 'BCS', 'LDA',  null,  null, 'LDY', 'LDA', 'LDX',  null, 'CLV', 'LDA', 'TSX',  null, 'LDY', 'LDA', 'LDX',  null,
+/* c */ 'CPY', 'CMP',  null,  null, 'CPY', 'CMP',  null,  null, 'INY', 'CMP', 'DEX',  null, 'CPY', 'CMP',  null,  null,
 /* d */ 'BNE', 'CMP',  null,  null,  null, 'CMP',  null,  null, 'CLD', 'CMP',  null,  null,  null, 'CMP',  null,  null,
-/* e */  null,  null,  null,  null,  null,  null,  null,  null,  null,  null, 'NOP',  null,  null,  null,  null,  null,
-/* f */ 'BEQ',  null,  null,  null,  null,  null,  null,  null, 'SED',  null,  null,  null,  null,  null,  null,  null
+/* e */ 'CPX', 'SBC',  null,  null, 'CPX',  null,  null,  null, 'INX', 'SBC', 'NOP',  null, 'CPX', 'SBC', 'SBC',  null,
+/* f */ 'BEQ', 'SBC',  null,  null,  null,  null,  null,  null, 'SED', 'SBC',  null,  null,  null, 'SBC', 'SBC',  null
 ];
 
 var OPCODE_MODE = [
@@ -79,18 +79,18 @@ var OPCODE_MODE = [
 /* 1 */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null,
 /* 2 */  ABS,  INX, null, null,  ZEP,  ZEP, null, null,  IMP,  IMM, null, null,  ABS,  ABS, null, null,
 /* 3 */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null,
-/* 4 */ null,  INX, null, null, null,  ZEP, null, null,  IMP,  IMM, null, null,  ABS,  ABS, null, null,
+/* 4 */  IMP,  INX, null, null, null,  ZEP, null, null,  IMP,  IMM, null, null,  ABS,  ABS, null, null,
 /* 5 */  REL,  INY, null, null, null,  ZPX, null, null, null,  ABY, null, null, null,  ABX, null, null,
-/* 6 */  IMP, null, null, null, null, null, null, null,  IMP, null, null, null,  IND, null, null, null,
-/* 7 */  REL, null, null, null, null, null, null, null,  IMP, null, null, null, null, null, null, null,
-/* 8 */ null,  INX, null, null, null,  ZEP,  ZEP, null, null, null, null, null, null,  ABS,  ABS, null,
-/* 9 */  REL,  IYN, null, null, null,  ZPX,  ZPY, null, null,  AYN, null, null, null,  AXN, null, null,
-/* a */ null,  INX,  IMM, null, null,  ZEP,  ZEP, null, null,  IMM, null, null, null,  ABS,  ABS, null,
-/* b */  REL,  INY, null, null, null,  ZPX,  ZPY, null,  IMP,  ABY, null, null, null,  ABX,  ABY, null,
-/* c */ null,  INX, null, null, null,  ZEP, null, null, null,  IMM, null, null, null,  ABS, null, null,
+/* 6 */  IMP,  INX, null, null, null,  ZEP, null, null,  IMP,  IMM, null, null,  IND,  ABS, null, null,
+/* 7 */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null,
+/* 8 */ null,  INX, null, null,  ZEP,  ZEP,  ZEP, null,  IMP, null,  IMP, null,  ABS,  ABS,  ABS, null,
+/* 9 */  REL,  IYN, null, null,  ZPX,  ZPX,  ZPY, null,  IMP,  AYN,  IMP, null, null,  AXN, null, null,
+/* a */  IMM,  INX,  IMM, null,  ZEP,  ZEP,  ZEP, null,  IMP,  IMM,  IMP, null,  ABS,  ABS,  ABS, null,
+/* b */  REL,  INY, null, null,  ZPX,  ZPX,  ZPY, null,  IMP,  ABY,  IMP, null,  ABX,  ABX,  ABY, null,
+/* c */  IMM,  INX, null, null,  ZEP,  ZEP, null, null,  IMP,  IMM,  IMP, null,  ABS,  ABS, null, null,
 /* d */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null,
-/* e */ null, null, null, null, null, null, null, null, null, null,  IMP, null, null, null, null, null,
-/* f */  REL, null, null, null, null, null, null, null,  IMP, null, null, null, null, null, null, null
+/* e */  IMM,  INX, null, null,  ZEP,  ZEP, null, null,  IMP,  IMM,  IMP, null,  ABS,  ABS, null, null,
+/* f */  REL,  INY, null, null, null,  ZPX, null, null,  IMP,  ABY, null, null, null,  ABX, null, null
 ];
 
 var OPCODE_CYCLES = [
@@ -99,18 +99,18 @@ var OPCODE_CYCLES = [
 /* 1 */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 4, 0, 0, 0, 4, 0, 0,
 /* 2 */ 6, 6, 0, 0, 3, 3, 0, 0, 4, 2, 0, 0, 4, 4, 0, 0,
 /* 3 */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 4, 0, 0, 0, 4, 0, 0,
-/* 4 */ 0, 6, 0, 0, 0, 3, 0, 0, 3, 2, 0, 0, 3, 4, 0, 0,
+/* 4 */ 6, 6, 0, 0, 0, 3, 0, 0, 3, 2, 0, 0, 3, 4, 0, 0,
 /* 5 */ 2, 5, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0,
-/* 6 */ 6, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0,
-/* 7 */ 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-/* 8 */ 0, 6, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 4, 4, 0,
-/* 9 */ 2, 6, 0, 0, 0, 4, 4, 0, 0, 5, 0, 0, 0, 5, 0, 0,
-/* a */ 0, 6, 2, 0, 0, 3, 3, 0, 0, 2, 0, 0, 0, 4, 4, 0,
-/* b */ 2, 5, 0, 0, 0, 4, 4, 0, 2, 4, 0, 0, 0, 4, 4, 0,
-/* c */ 0, 6, 0, 0, 0, 3, 0, 0, 0, 2, 0, 0, 0, 4, 0, 0,
+/* 6 */ 6, 6, 0, 0, 0, 3, 0, 0, 4, 2, 0, 0, 0, 4, 0, 0,
+/* 7 */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 4, 0, 0, 0, 4, 0, 0,
+/* 8 */ 0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,
+/* 9 */ 2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0,
+/* a */ 2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,
+/* b */ 2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,
+/* c */ 2, 6, 0, 0, 3, 3, 0, 0, 2, 2, 2, 0, 4, 4, 0, 0,
 /* d */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 0, 0, 0, 0, 4, 0, 0,
-/* e */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0,
-/* f */ 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0
+/* e */ 2, 6, 0, 0, 3, 3, 0, 0, 2, 2, 2, 0, 4, 4, 0, 0,
+/* f */ 2, 5, 0, 0, 0, 4, 0, 0, 2, 4, 0, 0, 0, 4, 0, 0
 ];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,7 +133,7 @@ BlissJN.NES = function( data, target ) {
 BlissJN.NES.prototype = {
     start : function() {
         var cycles = 0;
-        for( var i = 0; i < 500; i++ ) {
+        for( var i = 0; i < 1000; i++ ) {
             var opcode = this.m6502.fetch();
             var c = this.m6502.execute( opcode );
             if( c === 0 ) throw "error: no se definieron los ciclos para el opcode < " + opcode.toHex(2) + " >";
@@ -269,6 +269,20 @@ BlissJN.NES.M6502.prototype = {
         return address;
     },
 
+    ADC : function( mode ) {
+        var src   = this.mmu.readByte( this.getAddress(mode) );
+        var carry = ( (this.status & FLAG_C) === FLAG_C ) ? 1 : 0;
+        var r     = ( this.a + src + carry ) & 0xffff;
+        this.status &= ~( FLAG_C | FLAG_Z | FLAG_V | FLAG_N );
+        if( r > 0x00ff ) this.status |= FLAG_C;
+        r &= 0xff;
+        var c1 = ( (this.a & src) & 0x80 === 0x80 );
+        var c2 = ( (this.a & r) & 0x80 === 0x80 );
+        if( !c1 && c2 ) this.status |= FLAG_V;
+        this.a = r;
+        this.status |= ZN_FLAGS[ this.a ];
+    },
+
     AND : function( mode ) {
         this.a &= this.mmu.readByte( this.getAddress(mode) );
         this.status &= ~( FLAG_Z | FLAG_N );
@@ -383,10 +397,34 @@ BlissJN.NES.M6502.prototype = {
         if( (src & 0x80) === 0x80 ) this.status |= FLAG_N;
     },
 
+    DEX : function( mode ) {
+        this.x = ( this.x + 1 ) & 0xff;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.x ];
+    },
+
+    DEY : function( mode ) {
+        this.y = ( this.y + 1 ) & 0xff;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.y ];
+    },
+
     EOR : function( mode ) {
         this.a ^= this.mmu.readByte( this.getAddress(mode) );
         this.status &= ~( FLAG_Z | FLAG_N );
         this.status |= ZN_FLAGS[ this.a ];
+    },
+
+    INX : function( mode ) {
+        this.x = ( this.x + 1 ) & 0xff;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.x ];
+    },
+
+    INY : function( mode ) {
+        this.y = ( this.y + 1 ) & 0xff;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.y ];
     },
 
     JMP : function( mode ) {
@@ -447,11 +485,34 @@ BlissJN.NES.M6502.prototype = {
         this.status |= FLAG_P;
     },
 
+    RTI : function( mode ) {
+        this.status = this.stackPop();
+        this.status &= ~FLAG_B;
+        this.status |= FLAG_P;
+        var l = this.stackPop();
+        var h = this.stackPop();
+        this.pc = ( (h << 8) | l ) & 0xffff;
+    },
+
     RTS : function( mode ) {
         var l = this.stackPop();
         var h = this.stackPop();
         var address = ( (h << 8) | l ) & 0xffff;
         this.pc = ( address + 1 ) & 0xffff;
+    },
+
+    SBC : function( mode ) {
+        var src   = this.mmu.readByte( this.getAddress(mode) );
+        var carry = ( (this.status & FLAG_C) !== FLAG_C ) ? 1 : 0;
+        var r     = ( this.a - src - carry ) & 0xffff;
+        this.status &= ~( FLAG_C | FLAG_Z | FLAG_V | FLAG_N );
+        if( r < 0x0100 ) this.status |= FLAG_C;
+        r &= 0xff;
+        var c1 = ( (this.a & src) & 0x80 === 0x80 );
+        var c2 = ( (this.a & r) & 0x80 === 0x80 );
+        if( c1 && c2 ) this.status |= FLAG_V;
+        this.a = r;
+        this.status |= ZN_FLAGS[ this.a ];
     },
 
     SEC : function( mode ) {
@@ -476,6 +537,40 @@ BlissJN.NES.M6502.prototype = {
 
     STY : function( mode ) {
         this.mmu.writeByte( this.getAddress(mode), this.y );
+    },
+
+    TAX : function( mode ) {
+        this.x = this.a;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.x ];
+    },
+
+    TAY : function( mode ) {
+        this.y = this.a;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.y ];
+    },
+
+    TSX : function( mode ) {
+        this.x = this.sp;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.x ];
+    },
+
+    TXA : function( mode ) {
+        this.a = this.x;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.a ];
+    },
+
+    TXS : function( mode ) {
+        this.sp = this.x;
+    },
+
+    TYA : function( mode ) {
+        this.a = this.y;
+        this.status &= ~( FLAG_Z | FLAG_N );
+        this.status |= ZN_FLAGS[ this.a ];
     }
 }
 
