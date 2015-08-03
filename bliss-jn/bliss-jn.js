@@ -16,6 +16,7 @@ Object.prototype.toLength = function( size, char ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var DEBUG_MODE = false;
+var FPS_LIMIT  = 60;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -286,7 +287,7 @@ BlissJN.NES.prototype = {
             self.runFrame();
             self.renderFrame();
             self.debugPatternTables();
-        }, 1000 / 60 );
+        }, 1000 / FPS_LIMIT );
     },
 
     handleKey : function( code ) {
@@ -429,6 +430,12 @@ BlissJN.NES.MMU.prototype = {
         // ppu registers
         else if( address < 0x4000 ) this.ppu.writeRegister( address & 0x7, value );
 
+        // sprite dma
+        else if( address === 0x4014 ) {
+            var r = ( value << 8 ) & 0xffff;
+            for( var i = 0; i < 0x100; i++ ) this.sram[ i ] = this.vram[ (r + i) & 0xfff ];
+        }
+
         // fallback
         else this.rom[ address ] = value;
     },
@@ -484,8 +491,12 @@ BlissJN.NES.PPU.prototype = {
         return ( (this.regs[1] & 0x8) === 0x8 );
     },
 
+    spritesEnabled : function() {
+        return ( (this.regs[1] & 0x10) === 0x10 );
+    },
+
     isRendering : function() {
-        return ( (! this.isVBlank()) && this.backgroundEnabled() );
+        return ( (! this.isVBlank()) && (this.backgroundEnabled() || this.spritesEnabled()) );
     },
 
     readRegister : function( register ) {
@@ -499,7 +510,8 @@ BlissJN.NES.PPU.prototype = {
             } break;
 
             case 4: {
-                // TODO: sprites
+                var r = this.mmu.readSRAM( this.regs[3] );
+                if( this.isRendering() ) this.regs[3]++;
             } break;
 
             case 7: {
@@ -539,8 +551,13 @@ BlissJN.NES.PPU.prototype = {
                 this.regs[1] = value;
             } break;
 
-            case 3: case 4: {
-                // TODO: sprites
+            case 3: {
+                this.regs[3] = value;
+            } break;
+
+            case 4: {
+                this.mmu.writeSRAM( this.regs[3], value );
+                this.regs[3]++;
             } break;
 
             case 5: {
