@@ -1,6 +1,7 @@
 body {
     font-family: 'Arial', sans-serif;
     font-size: 1em;
+    padding: 30px;
 }
 
 pre {
@@ -14,9 +15,7 @@ pre {
 }
 
 #patterns-viewer-container {
-    position: absolute;
-    right: 30px;
-    top: 30px;
+    float: right;
 }
 
 .panel {

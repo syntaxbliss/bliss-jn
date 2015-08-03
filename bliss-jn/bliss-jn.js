@@ -19,6 +19,123 @@ var DEBUG_MODE = false;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var MIRRORING_VERTICAL   = 0;
+var MIRRORING_HORIZONTAL = 1;
+
+var PALETTE = [
+    0x757575, 0x271b8f, 0x0000ab, 0x47009f, 0x8f0077, 0xab0013, 0xa70000, 0x7f0b00,
+    0x432f00, 0x004700, 0x005100, 0x003f17, 0x1b3f5f, 0x000000, 0x000000, 0x000000,
+    0xbcbcbc, 0x0073ef, 0x233bef, 0x8300f3, 0xbf00bf, 0xe7005b, 0xdb2b00, 0xcb4f0f,
+    0x8b7300, 0x009700, 0x00ab00, 0x00933b, 0x00838b, 0x000000, 0x000000, 0x000000,
+    0xffffff, 0x3fbfff, 0x5f97ff, 0xa78bfd, 0xf77bff, 0xff77b7, 0xff7763, 0xff9b3b,
+    0xf3bf3f, 0x83d313, 0x4fdf4b, 0x58f898, 0x00ebdb, 0x000000, 0x000000, 0x000000,
+    0xffffff, 0xabe7ff, 0xc7d7ff, 0xd7cbff, 0xffc7ff, 0xffc7db, 0xffbfb3, 0xffdbab,
+    0xffe7a3, 0xe3ffa3, 0xabf3bf, 0xb3ffcf, 0x9ffff3, 0x000000, 0x000000, 0x000000
+];
+
+var ATTRIBUTE_LOCK = [
+     0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7,
+     0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7,
+     0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7,
+     0,  0,  0,  0,  1,  1,  1,  1,  2,  2,  2,  2,  3,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7,
+     8,  8,  8,  8,  9,  9,  9,  9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+     8,  8,  8,  8,  9,  9,  9,  9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+     8,  8,  8,  8,  9,  9,  9,  9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+     8,  8,  8,  8,  9,  9,  9,  9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15,
+    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 23, 23,
+    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 23, 23,
+    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 23, 23,
+    16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 23, 23,
+    24, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 27, 27, 27, 27, 28, 28, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30, 31, 31, 31, 31,
+    24, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 27, 27, 27, 27, 28, 28, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30, 31, 31, 31, 31,
+    24, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 27, 27, 27, 27, 28, 28, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30, 31, 31, 31, 31,
+    24, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 27, 27, 27, 27, 28, 28, 28, 28, 29, 29, 29, 29, 30, 30, 30, 30, 31, 31, 31, 31,
+    32, 32, 32, 32, 33, 33, 33, 33, 34, 34, 34, 34, 35, 35, 35, 35, 36, 36, 36, 36, 37, 37, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39,
+    32, 32, 32, 32, 33, 33, 33, 33, 34, 34, 34, 34, 35, 35, 35, 35, 36, 36, 36, 36, 37, 37, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39,
+    32, 32, 32, 32, 33, 33, 33, 33, 34, 34, 34, 34, 35, 35, 35, 35, 36, 36, 36, 36, 37, 37, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39,
+    32, 32, 32, 32, 33, 33, 33, 33, 34, 34, 34, 34, 35, 35, 35, 35, 36, 36, 36, 36, 37, 37, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39,
+    40, 40, 40, 40, 41, 41, 41, 41, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 45, 45, 45, 45, 46, 46, 46, 46, 47, 47, 47, 47,
+    40, 40, 40, 40, 41, 41, 41, 41, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 45, 45, 45, 45, 46, 46, 46, 46, 47, 47, 47, 47,
+    40, 40, 40, 40, 41, 41, 41, 41, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 45, 45, 45, 45, 46, 46, 46, 46, 47, 47, 47, 47,
+    40, 40, 40, 40, 41, 41, 41, 41, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 45, 45, 45, 45, 46, 46, 46, 46, 47, 47, 47, 47,
+    48, 48, 48, 48, 49, 49, 49, 49, 50, 50, 50, 50, 51, 51, 51, 51, 52, 52, 52, 52, 53, 53, 53, 53, 54, 54, 54, 54, 55, 55, 55, 55,
+    48, 48, 48, 48, 49, 49, 49, 49, 50, 50, 50, 50, 51, 51, 51, 51, 52, 52, 52, 52, 53, 53, 53, 53, 54, 54, 54, 54, 55, 55, 55, 55,
+    48, 48, 48, 48, 49, 49, 49, 49, 50, 50, 50, 50, 51, 51, 51, 51, 52, 52, 52, 52, 53, 53, 53, 53, 54, 54, 54, 54, 55, 55, 55, 55,
+    48, 48, 48, 48, 49, 49, 49, 49, 50, 50, 50, 50, 51, 51, 51, 51, 52, 52, 52, 52, 53, 53, 53, 53, 54, 54, 54, 54, 55, 55, 55, 55,
+    56, 56, 56, 56, 57, 57, 57, 57, 58, 58, 58, 58, 59, 59, 59, 59, 60, 60, 60, 60, 61, 61, 61, 61, 62, 62, 62, 62, 63, 63, 63, 63,
+    56, 56, 56, 56, 57, 57, 57, 57, 58, 58, 58, 58, 59, 59, 59, 59, 60, 60, 60, 60, 61, 61, 61, 61, 62, 62, 62, 62, 63, 63, 63, 63,
+    56, 56, 56, 56, 57, 57, 57, 57, 58, 58, 58, 58, 59, 59, 59, 59, 60, 60, 60, 60, 61, 61, 61, 61, 62, 62, 62, 62, 63, 63, 63, 63,
+    56, 56, 56, 56, 57, 57, 57, 57, 58, 58, 58, 58, 59, 59, 59, 59, 60, 60, 60, 60, 61, 61, 61, 61, 62, 62, 62, 62, 63, 63, 63, 63
+];
+
+var ATTRIBUTE_MASK = [
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+    0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0, 0x30, 0x30, 0xc0, 0xc0,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,
+     0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc,  0x3,  0x3,  0xc,  0xc
+];
+
+var ATTRIBUTE_SHIFT = [
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6, 4, 4, 6, 6,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2,
+    0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2
+];
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 var FLAG_N = 0x80;
 var FLAG_V = 0x40;
 var FLAG_P = 0x20;
@@ -167,8 +284,9 @@ BlissJN.NES.prototype = {
         this.m6502.reset();
         this.fps = setInterval( function() {
             self.runFrame();
+            self.renderFrame();
             self.debugPatternTables();
-        }, 1000 );
+        }, 1000 / 60 );
     },
 
     handleKey : function( code ) {
@@ -181,13 +299,23 @@ BlissJN.NES.prototype = {
     },
 
     runFrame : function() {
-        while( this.totalTicks < 89342 ) {
-            var c = this.m6502.execute( this.m6502.fetch() );
-            this.frameTicks += c;
-            this.totalTicks += c;
+        var timming = [ 114, 114, 113 ], index = 0, ticks = 0;
+
+        for( var i = 0; i < 262; i++ ) {
+            while( ticks < timming[index % 3] ) {
+                var t = this.m6502.execute( this.m6502.fetch() );
+                ticks += t;
+            }
+            ticks -= timming[ index % 3 ];
+            index++;
+
+            this.mmu.clockPPU();
+            this.clockInterrupts();
         }
-        this.totalTicks -= this.frameTicks;
-        this.frameTicks = 0;
+    },
+
+    clockInterrupts : function() {
+        if( this.mmu.wantNMI() ) this.m6502.triggerNMI();
     },
 
     debugPatternTables : function() {
@@ -204,11 +332,8 @@ BlissJN.NES.prototype = {
                 }
             }
         }
-        this.renderCanvas( this.patternsViewer, buffer );
-    },
 
-    renderCanvas : function( target, buffer ) {
-        var canvas = target, ctx = target.getContext('2d'), imgData = ctx.createImageData( canvas.width, canvas.height );
+        var canvas = this.patternsViewer, ctx = this.patternsViewer.getContext('2d'), imgData = ctx.createImageData( canvas.width, canvas.height );
         var x = 0, y = 0, tile = 0;
         for( var i = 0; i < buffer.length; i++ ) {
             var colour = buffer[ i ];
@@ -229,6 +354,20 @@ BlissJN.NES.prototype = {
             }
         }
         ctx.putImageData( imgData, 0, 0 );
+    },
+
+    renderFrame : function() {
+        var frame = this.mmu.getScreenBuffer(), buffer = [];
+        frame.forEach( function(i) { buffer.push(PALETTE[i]) });
+        var canvas = this.target, ctx = this.target.getContext('2d'), imgData = ctx.createImageData( canvas.width, canvas.height ), index = 0;
+        for( var i = 0; i < buffer.length; i++ ) {
+            var colour = buffer[ i ];
+            imgData.data[ index++ ] = ( colour >> 16 ) & 0xff;
+            imgData.data[ index++ ] = ( colour >> 8 ) & 0xff;
+            imgData.data[ index++ ] = colour & 0xff;
+            imgData.data[ index++ ] = 255;
+        }
+        ctx.putImageData( imgData, 0, 0 );
     }
 }
 
@@ -241,6 +380,7 @@ BlissJN.NES.MMU = function( data ) {
     for( var i = 0; i < 0x10000; i++ ) this.rom.push( 0x00 );
     for( var i = 0; i < 0x4000; i++ ) this.vram.push( 0x00 );
     for( var i = 0; i < 0x100; i++ ) this.sram.push( 0x00 );
+    this.ppu = new BlissJN.NES.PPU( this );
     this.allocate( data );
 }
 
@@ -256,18 +396,301 @@ BlissJN.NES.MMU.prototype = {
             throw "error: demasiados bancos de memoria PRG-ROM";
         }
         for( var i = 0; i < 0x2000; i++ ) this.vram[ i ] = data[ 16 + index++ ];
+        this.ppu.setMirroring( data[6] );
+    },
+
+    clockPPU : function() {
+        this.ppu.runScanline();
+    },
+
+    getScreenBuffer : function() {
+        return this.ppu.getScreenBuffer();
+    },
+
+    wantNMI : function() {
+        return this.ppu.wantNMI();
     },
 
     readByte : function( address ) {
-        return this.rom[ address ];
+        // ram
+        if( address < 0x2000 ) return this.rom[ address & 0x07ff ];
+
+        // ppu registers
+        else if( address < 0x4000 ) return this.ppu.readRegister( address & 0x7 );
+
+        // fallback
+        else return this.rom[ address ];
     },
 
     writeByte : function( address, value ) {
-        this.rom[ address ] = value;
+        // ram
+        if( address < 0x2000 ) this.rom[ address & 0x07ff ] = value;
+
+        // ppu registers
+        else if( address < 0x4000 ) this.ppu.writeRegister( address & 0x7, value );
+
+        // fallback
+        else this.rom[ address ] = value;
+    },
+
+    readVRAM : function( address ) {
+        return this.vram[ address ];
+    },
+
+    writeVRAM : function( address, value ) {
+        this.vram[ address ] = value;
     },
 
     getVRAM : function() {
         return this.vram;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlissJN.NES.PPU = function( mmu ) {
+    this.mmu          = mmu;
+    this.regs         = { 0 : 0, 1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0, 6 : 0, 7 : 0 };
+    this.loopyT       = 0;
+    this.first        = true;
+    this.mirroring    = MIRRORING_HORIZONTAL;
+    this.bus          = 0;
+    this.buffer       = 0;
+    this.scanline     = 0;
+    this.pendingNMI   = false;
+    this.screenBuffer = [];
+}
+
+BlissJN.NES.PPU.prototype = {
+    setMirroring : function( value ) {
+        this.mirroring = value;
+    },
+
+    getScreenBuffer : function() {
+        return this.screenBuffer;
+    },
+
+    wantNMI : function() {
+        var r = this.pendingNMI;
+        if( r ) this.pendingNMI = false;
+        return r;
+    },
+
+    isVBlank : function() {
+        return ( (this.regs[2] & 0x80) === 0x80 );
+    },
+
+    backgroundEnabled : function() {
+        return ( (this.regs[1] & 0x8) === 0x8 );
+    },
+
+    isRendering : function() {
+        return ( (! this.isVBlank()) && this.backgroundEnabled() );
+    },
+
+    readRegister : function( register ) {
+        switch( register ) {
+            case 2: {
+                var r = this.regs[2];
+                if( this.isVBlank() ) r |= 0x80;
+                this.regs[2] &= 0x7f;
+                this.first = true;
+                return r;
+            } break;
+
+            case 4: {
+                // TODO: sprites
+            } break;
+
+            case 7: {
+                var r = 0;
+
+                // 'ppuaddr' esta dentro del rango de la paleta
+                if( (this.regs[6] >= 0x3f00) && (this.regs[6] < 0x4000) ) {
+                    r = this.mmu.readVRAM( this.regs[6] );
+                    this.buffer = this.mmu.readVRAM( (this.regs[6] - 0x1000) & 0xffff );
+                }
+                
+                // 'ppuaddr' esta fuera del rango de la paleta
+                else {
+                    r = this.buffer;
+                    this.buffer = this.mmu.readVRAM( this.regs[6] );
+                }
+                
+                // incrementar el valor de 'ppuaddr' segun 'ppuctrl:2'
+                this.regs[6] += ( (this.regs[0] & 0x4) === 0x4 ? 32 : 1 );
+                
+                return r;
+            } break;
+
+            case 0: case 1: case 5: case 6: return this.bus;
+        }
+    },
+
+    writeRegister : function( register, value ) {
+        switch( register ) {
+            case 0: {
+                this.regs[0] = value;
+                this.loopyT &= 0x73ff;
+                this.loopyT |= ( (value & 0x3 ) << 10 ) & 0xffff;
+            } break;
+
+            case 1: {
+                this.regs[1] = value;
+            } break;
+
+            case 3: case 4: {
+                // TODO: sprites
+            } break;
+
+            case 5: {
+                if( this.first ) {
+                    this.loopyT &= 0x7fe0;
+                    this.loopyT |= ( (value & 0xf8) >> 3 ) & 0xffff;
+                } else {
+                    this.loopyT &= 0x0c1f;
+                    this.loopyT |= ( ((value & 0xf8) << 2) | ((value & 0x7) << 12) ) & 0xffff;
+                }
+                this.first ^= true;
+            } break;
+
+            case 6: {
+                if( this.first ) {
+                    this.loopyT &= 0x40ff;
+                    this.loopyT |= ( (value & 0x3f) << 8 ) & 0xffff;
+                } else {
+                    this.loopyT &= 0x7f00;
+                    this.loopyT |= value;
+                    this.regs[6] = this.loopyT;
+                }
+                this.first ^= true;
+            } break;
+
+            case 7: {
+                // name tables
+                if( this.regs[6] < 0x3000 ) {
+                    // TODO: mappers
+                    if( this.regs[6] >= 0x2000 ) {
+                        var t = this.regs[6] & 0x2c00;
+
+                        if( this.mirroring === MIRRORING_VERTICAL ) {
+                            if( t === 0x2000 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] + 0x800) & 0xffff, value );
+                            } else if( t === 0x2400 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] + 0x800) & 0xffff, value );
+                            } else if( t === 0x2800 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] - 0x800) & 0xffff, value );
+                            } else if( t === 0x2c00 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] - 0x800) & 0xffff, value );
+                            }
+                        } else if( this.mirroring === MIRRORING_HORIZONTAL ) {
+                            if( t === 0x2000 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] + 0x400) & 0xffff, value );
+                            } else if( t === 0x2400 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] - 0x400) & 0xffff, value );
+                            } else if( t === 0x2800 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] + 0x400) & 0xffff, value );
+                            } else if( t === 0x2c00 ) {
+                                this.mmu.writeVRAM( this.regs[6], value );
+                                this.mmu.writeVRAM( (this.regs[6] - 0x400) & 0xffff, value );
+                            }
+                        }
+                    }
+                }
+
+                // paleta
+                else if( this.regs[6] < 0x4000 ) {
+                    value &= 0x3f;
+                    this.mmu.writeVRAM( this.regs[6], value );
+                    if( (this.regs[6] === 0x3f00) || (this.regs[6] === 0x3f10) ) {
+                        this.mmu.writeVRAM( 0x3f00, value );
+                        this.mmu.writeVRAM( 0x3f10, value );
+                    } else if( (this.regs[6] === 0x3f04) || (this.regs[6] === 0x3f14) ) {
+                        this.mmu.writeVRAM( 0x3f04, value );
+                        this.mmu.writeVRAM( 0x3f14, value );
+                    } else if( (this.regs[6] === 0x3f08) || (this.regs[6] === 0x3f18) ) {
+                        this.mmu.writeVRAM( 0x3f08, value );
+                        this.mmu.writeVRAM( 0x3f18, value );
+                    } else if( (this.regs[6] === 0x3f0c) || (this.regs[6] === 0x3f1c) ) {
+                        this.mmu.writeVRAM( 0x3f0c, value );
+                        this.mmu.writeVRAM( 0x3f1c, value );
+                    }
+                }
+
+                this.regs[6] += ( (this.regs[0] & 0x4) === 0x4 ? 32 : 1 );
+            } break;
+        }
+    },
+
+    runScanline : function() {
+        // pre-render scanline
+        if( this.scanline === 0 ) {
+            this.screenBuffer = [];
+            if( this.isRendering() ) this.regs[6] = this.loopyT;
+        }
+
+        // visible scanlines
+        else if( this.scanline <= 240  ) {
+            if( this.backgroundEnabled() ) {
+                this.regs[6] &= 0xfbe0;
+                this.regs[6] |= ( this.loopyT & 0x041f );
+                this.drawBackground();
+                if( (this.regs[6] & 0x7000) === 0x7000 ) {
+                    var t = ( this.regs[6] & 0x03e0 );
+                    this.regs[6] &= 0xfff;
+                    switch( t ) {
+                        case 0x03a0: this.regs[6] ^= 0x0ba0; break;
+                        case 0x03e0: this.regs[6] ^= 0x03e0; break;
+                        default: this.regs[6] += 0x0020; break;
+                    }
+                } else {
+                    this.regs[6] += 0x1000;
+                }
+            }
+        }
+
+        // post-render scanline
+        else if( this.scanline === 241 ) {
+            this.regs[2] |= 0x80;
+            if( (this.regs[0] & 0x80) === 0x80 ) this.pendingNMI = true;
+        }
+        
+        // ultimo scanline del vblank
+        else if( this.scanline === 261 ) {
+            this.regs[2] &= 0x7f;
+            this.scanline = -1;
+        }
+
+        this.scanline++;
+    },
+
+    drawBackground : function() {
+        var nameTableAddress      = ( (this.regs[0] & 0x3) * 0x400 + 0x2000 ) & 0xffff;
+        var attributeTableAddress = ( nameTableAddress + 0x03c0 ) & 0xffff;
+        var patternTableAddress   = ( (this.regs[0] & 0x10) === 0x10 ? 0x1000 : 0 );
+        
+        for( var tile = 0; tile < 32; tile++ ) {
+            var tileNumber     = this.mmu.readVRAM( (nameTableAddress | (this.regs[6] & 0xfff)) & 0xffff );
+            var patternAddress = ( (tileNumber << 4) | (this.regs[6] >> 12) |  patternTableAddress ) & 0xffff;
+            var attributeByte  =  this.mmu.readVRAM( (attributeTableAddress | (this.regs[6] & 0xc00) | ATTRIBUTE_LOCK[this.regs[6] & 0x3ff]) & 0xffff );
+            attributeByte &= ATTRIBUTE_MASK[ this.regs[6] & 0x3ff ];
+            attributeByte >>= ATTRIBUTE_SHIFT[ this.regs[6] & 0x3ff ];
+            for( var bit = 7; bit >= 0; bit-- ) {
+                var c0 = ( this.mmu.readVRAM(patternAddress) >> bit ) & 0x1;
+                var c1 = ( this.mmu.readVRAM(patternAddress | 8) >> bit ) & 0x1;
+                var index = ( (attributeByte << 2) | (c1 << 1) | c0 ) & 0xf;
+                this.screenBuffer.push( this.mmu.readVRAM((0x3f00 | index) & 0xffff) );
+            }
+
+            if( (this.regs[6] & 0x1f) === 0x1f ) this.regs[6] ^= 0x41f; else this.regs[6]++;
+        }
     }
 }
 
@@ -306,6 +729,15 @@ BlissJN.NES.M6502.prototype = {
             status : this.status,
             ticks  : this.ticks
         };
+    },
+
+    triggerNMI : function() {
+        this.stackPush( (this.pc >> 8) & 0xff );
+        this.stackPush( this.pc & 0xff );
+        this.stackPush( (this.status | 0x20) & 0xff );
+        this.status |= FLAG_I;
+        var l = this.mmu.readByte( 0xfffa ), h = this.mmu.readByte( 0xfffb );
+        this.pc = ( (h << 8) | l ) & 0xffff;
     },
 
     fetch : function() {
