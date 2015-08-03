@@ -6,11 +6,16 @@ Object.prototype.toHex = function( size ) {
     return str.toUpperCase();
 }
 
-Object.prototype.toLength = function( size ) {
+Object.prototype.toLength = function( size, char ) {
     var str = this.toString();
-    while( str.length < size ) str = ' ' + str;
+    var c = char || ' ';
+    while( str.length < size ) str = char + str;
     return str;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var DEBUG_MODE = false;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -124,28 +129,106 @@ var OPCODE_CYCLES = [
 
 BlissJN = function( args ) {
     this.target = args.target;
-    this.nes    = new BlissJN.NES( args.gameData, args.target );
+    this.nes    = new BlissJN.NES( args.gameData, args.target, args.patternsViewer );
+    this.initialize();
 }
 
-BlissJN.prototype = {}
+BlissJN.prototype = {
+    initialize : function() {
+        var self = this;
+        window.addEventListener('keypress', function(ev) {
+            switch( ev.keyCode ) {
+                case 27: { // escape
+                    self.nes.handleKey( ev.keyCode );
+                } break;
+            }
+        }, false );
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlissJN.NES = function( data, target ) {
-    this.mmu   = new BlissJN.NES.MMU( data );
-    this.m6502 = new BlissJN.NES.M6502( this.mmu, target );
+BlissJN.NES = function( data, target, patternsViewer ) {
+    this.mmu            = new BlissJN.NES.MMU( data );
+    this.m6502          = new BlissJN.NES.M6502( this.mmu, target );
+    this.target         = target;
+    this.patternsViewer = patternsViewer;
+    this.totalTicks     = 0;
+    this.frameTicks     = 0;
     this.start();
 }
 
 BlissJN.NES.prototype = {
     start : function() {
-        var cycles = 0;
-        for( var i = 0; i < 6000; i++ ) {
-            var opcode = this.m6502.fetch();
-            var c = this.m6502.execute( opcode );
-            if( c === 0 ) throw "error: no se definieron los ciclos para el opcode < " + opcode.toHex(2) + " >";
-            cycles += c;
+        var self = this;
+
+        console.log( 'Emulation started' );
+
+        this.m6502.reset();
+        this.fps = setInterval( function() {
+            self.runFrame();
+            self.debugPatternTables();
+        }, 1000 );
+    },
+
+    handleKey : function( code ) {
+        switch( code ) {
+            case 27: { // escape
+                console.log( 'Emulation finished' );
+                clearInterval( this.fps );
+            } break;
         }
+    },
+
+    runFrame : function() {
+        while( this.totalTicks < 89342 ) {
+            var c = this.m6502.execute( this.m6502.fetch() );
+            this.frameTicks += c;
+            this.totalTicks += c;
+        }
+        this.totalTicks -= this.frameTicks;
+        this.frameTicks = 0;
+    },
+
+    debugPatternTables : function() {
+        var vram   = this.mmu.getVRAM();
+        var buffer = [], palette = [ 0x000000, 0xff0000, 0x00ff00, 0x0000ff ];
+        for( var tile = 0; tile < 0x2000; tile += 16 ) {
+            for( var line = 0; line < 8; line++ ) {
+                var l = vram[ tile + line ], h = vram[ tile + line + 8 ];
+                for( var bit = 7; bit >= 0; bit-- ) {
+                    var c0 = ( l >> bit ) & 0x1;
+                    var c1 = ( h >> bit ) & 0x1;
+                    var colour = ( (c1 << 1) | c0 ) & 0x3;
+                    buffer.push( palette[colour] );
+                }
+            }
+        }
+        this.renderCanvas( this.patternsViewer, buffer );
+    },
+
+    renderCanvas : function( target, buffer ) {
+        var canvas = target, ctx = target.getContext('2d'), imgData = ctx.createImageData( canvas.width, canvas.height );
+        var x = 0, y = 0, tile = 0;
+        for( var i = 0; i < buffer.length; i++ ) {
+            var colour = buffer[ i ];
+            var index = 4 * ( x + y * canvas.width );
+            imgData.data[ index ] = ( colour >> 16 ) & 0xff;
+            imgData.data[ index + 1 ] = ( colour >> 8 ) & 0xff;
+            imgData.data[ index + 2 ] = colour & 0xff;
+            imgData.data[ index + 3 ] = 255;
+
+            x++;
+            if( x % 8 === 0 ) {
+                y++;
+                if( y % 8 === 0 ) {
+                    tile++;
+                    y = Math.floor( tile / 32 ) * 8;
+                }
+                x = ( tile % 32 ) * 8;
+            }
+        }
+        ctx.putImageData( imgData, 0, 0 );
     }
 }
 
@@ -155,11 +238,9 @@ BlissJN.NES.MMU = function( data ) {
     this.rom  = [];
     this.vram = [];
     this.sram = [];
-
     for( var i = 0; i < 0x10000; i++ ) this.rom.push( 0x00 );
     for( var i = 0; i < 0x4000; i++ ) this.vram.push( 0x00 );
     for( var i = 0; i < 0x100; i++ ) this.sram.push( 0x00 );
-
     this.allocate( data );
 }
 
@@ -183,6 +264,10 @@ BlissJN.NES.MMU.prototype = {
 
     writeByte : function( address, value ) {
         this.rom[ address ] = value;
+    },
+
+    getVRAM : function() {
+        return this.vram;
     }
 }
 
@@ -191,7 +276,7 @@ BlissJN.NES.MMU.prototype = {
 BlissJN.NES.M6502 = function( mmu, target ) {
     this.debugger = new BlissJN.NES.M6502.Debugger( target );
     this.mmu      = mmu;
-    this.pc       = 0xc000;
+    this.pc       = 0x00;
     this.a        = 0x00;
     this.x        = 0x00;
     this.y        = 0x00;
@@ -201,6 +286,15 @@ BlissJN.NES.M6502 = function( mmu, target ) {
 }
 
 BlissJN.NES.M6502.prototype = {
+    reset : function() {
+        if( DEBUG_MODE ) {
+            this.pc = 0xc000
+        } else {
+            var l = this.mmu.readByte( 0xfffc ), h = this.mmu.readByte( 0xfffd );
+            this.pc = ( (h << 8) | l ) & 0xffff;
+        }
+    },
+
     getContext : function() {
         return {
             mmu    : this.mmu,
@@ -221,7 +315,7 @@ BlissJN.NES.M6502.prototype = {
     },
 
     execute : function( opcode ) {
-        this.debugger.trace( this.getContext(), opcode );
+        if( DEBUG_MODE ) this.debugger.trace( this.getContext(), opcode );
         this.ticks = 0;
         var operation = OPCODE_OPERATION[ opcode ];
         this[ operation ]( OPCODE_MODE[opcode] );
