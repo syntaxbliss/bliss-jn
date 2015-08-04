@@ -14,8 +14,13 @@ pre {
     word-wrap: break-word;
 }
 
-#patterns-viewer-container {
+.panels-list {
     float: right;
+}
+
+.panels-list li {
+    float: right;
+    margin-left: 10px;
 }
 
 .panel {

@@ -247,7 +247,7 @@ var OPCODE_CYCLES = [
 
 BlissJN = function( args ) {
     this.target = args.target;
-    this.nes    = new BlissJN.NES( args.gameData, args.target, args.patternsViewer );
+    this.nes    = new BlissJN.NES( args.gameData, args.target, args.patternsViewer, args.namesViewer );
     this.initialize();
 }
 
@@ -266,11 +266,12 @@ BlissJN.prototype = {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlissJN.NES = function( data, target, patternsViewer ) {
+BlissJN.NES = function( data, target, patternsViewer,namesViewer ) {
     this.mmu            = new BlissJN.NES.MMU( data );
     this.m6502          = new BlissJN.NES.M6502( this.mmu, target );
     this.target         = target;
     this.patternsViewer = patternsViewer;
+    this.namesViewer    = namesViewer;
     this.totalTicks     = 0;
     this.frameTicks     = 0;
     this.start();
@@ -287,6 +288,7 @@ BlissJN.NES.prototype = {
             self.runFrame();
             self.renderFrame();
             self.debugPatternTables();
+            self.debugNameTables();
         }, 1000 / FPS_LIMIT );
     },
 
@@ -320,8 +322,7 @@ BlissJN.NES.prototype = {
     },
 
     debugPatternTables : function() {
-        var vram   = this.mmu.getVRAM();
-        var buffer = [], palette = [ 0x000000, 0xff0000, 0x00ff00, 0x0000ff ];
+        var vram = this.mmu.getPatternTables(), buffer = [], palette = [ 0x000000, 0xff0000, 0x00ff00, 0x0000ff ];
         for( var tile = 0; tile < 0x2000; tile += 16 ) {
             for( var line = 0; line < 8; line++ ) {
                 var l = vram[ tile + line ], h = vram[ tile + line + 8 ];
@@ -355,6 +356,58 @@ BlissJN.NES.prototype = {
             }
         }
         ctx.putImageData( imgData, 0, 0 );
+    },
+
+    debugNameTables : function() {
+        var patterns = this.mmu.getPatternTables(), names = this.mmu.getNameTables(), base = this.mmu.getActivePatternAddress();
+        var startX = 0, startY = 0;
+        for( var nt = 0; nt < 4; nt++ ) {
+            var buffer = [];
+            for( var tile = 0; tile < 32 * 30; tile++ ) {
+                var index = names[ nt ][ tile ];
+                for( var line = 0; line < 8; line++ ) {
+                    var l = patterns[ index * 16 + line + base ], h = patterns[ index * 16 + 8 + line + base ];
+                    for( var bit = 7; bit >= 0; bit-- ) {
+                        var c0 = ( l >> bit ) & 0x1;
+                        var c1 = ( h >> bit ) & 0x1;
+                        var colour = ( (c1 << 1) | c0 ) & 0x3;
+                        buffer.push( PALETTE[colour] );
+                    }
+                }
+            }
+
+            var canvas = this.namesViewer, ctx = this.namesViewer.getContext('2d'), imgData = ctx.createImageData( canvas.width / 2, canvas.height / 2 );
+            var x = 0, y = 0, tile = 0;
+            for( var i = 0; i < buffer.length; i++ ) {
+                var colour = buffer[ i ];
+                var index = 4 * ( x + y * (canvas.width / 2) );
+                imgData.data[ index ] = ( colour >> 16 ) & 0xff;
+                imgData.data[ index + 1 ] = ( colour >> 8 ) & 0xff;
+                imgData.data[ index + 2 ] = colour & 0xff;
+                imgData.data[ index + 3 ] = 255;
+
+                x++;
+                if( x % 8 === 0 ) {
+                    y++;
+                    if( y % 8 === 0 ) {
+                        tile++;
+                        y = Math.floor( tile / 32 ) * 8;
+                    }
+                    x = ( tile % 32 ) * 8;
+                }
+            }
+            ctx.putImageData( imgData, startX, startY, 0, 0, 256, 240 );
+            if( nt === 1 ) {
+                startX = 0;
+                startY = 240;
+            } else if( nt === 2 ) {
+                startX = 256;
+                startY = 0;
+            } else if( nt === 3 ) {
+                startX = 256;
+                startY = 240;
+            }
+        }
     },
 
     renderFrame : function() {
@@ -437,8 +490,7 @@ BlissJN.NES.MMU.prototype = {
         // sprite dma
         else if( address === 0x4014 ) {
             var r = ( value << 8 ) & 0xffff;
-            // TODO: sprites
-            //for( var i = 0; i < 0x100; i++ ) this.sram[ i ] = this.vram[ (r + i) & 0xfff ];
+            for( var i = 0; i < 0x100; i++ ) this.sram[ i ] = this.readVRAM( (r + i) & 0xfff );
         }
 
         // fallback
@@ -455,8 +507,11 @@ BlissJN.NES.MMU.prototype = {
             return this.names[ index ][ address & 0x3ff ];
         }
 
+        // [$4000 - $DFFF] es un mirror de [$0000 - $3FFF]
+        else if( address < 0xc000 ) return this.readVRAM( address & 0x3fff );
+
         // FIXME
-        throw "error: VRAM READ @ " + address.toHex(4);
+        else throw "error: VRAM READ @ " + address.toHex(4);
     },
 
     writeVRAM : function( address, value ) {
@@ -468,13 +523,21 @@ BlissJN.NES.MMU.prototype = {
             var index = ( (address & 0xc00) >> 10 ) & 0x3;
             this.names[ index ][ address & 0x3ff ] = value;
         }
+
+        // FIXME
+        else throw "error: VRAM WRITE @ " + address.toHex(4);
     },
 
-    getVRAM : function() {
-        var r = [];
-        this.patterns.forEach( function(i) { r.push(i) });
-        this.names.forEach( function(i) { r.push(i) });
-        return r;
+    getPatternTables : function() {
+        return this.patterns;
+    },
+
+    getNameTables : function() {
+        return this.names;
+    },
+
+    getActivePatternAddress : function() {
+        return this.ppu.getActivePatternAddress();
     }
 }
 
@@ -494,6 +557,10 @@ BlissJN.NES.PPU = function( mmu ) {
 }
 
 BlissJN.NES.PPU.prototype = {
+    getActivePatternAddress : function() {
+        return ( (this.regs[0] & 0x10) === 0x10 ? 0x1000 : 0x000 );
+    },
+
     setMirroring : function( value ) {
         this.mirroring = value;
     },
@@ -720,14 +787,17 @@ BlissJN.NES.PPU.prototype = {
         
         for( var tile = 0; tile < 32; tile++ ) {
             var tileNumber     = this.mmu.readVRAM( (nameTableAddress | (this.regs[6] & 0xfff)) & 0xffff );
-            var patternAddress = ( (tileNumber << 4) | (this.regs[6] >> 12) |  patternTableAddress ) & 0xffff;
-            var attributeByte  =  this.mmu.readVRAM( (attributeTableAddress | (this.regs[6] & 0xc00) | ATTRIBUTE_LOCK[this.regs[6] & 0x3ff]) & 0xffff );
-            attributeByte &= ATTRIBUTE_MASK[ this.regs[6] & 0x3ff ];
-            attributeByte >>= ATTRIBUTE_SHIFT[ this.regs[6] & 0x3ff ];
+            var patternAddress = ( (tileNumber << 4) | (this.regs[6] >> 12) | patternTableAddress ) & 0xffff;
             for( var bit = 7; bit >= 0; bit-- ) {
                 var c0 = ( this.mmu.readVRAM(patternAddress) >> bit ) & 0x1;
                 var c1 = ( this.mmu.readVRAM(patternAddress | 8) >> bit ) & 0x1;
-                var index = ( (attributeByte << 2) | (c1 << 1) | c0 ) & 0xf;
+                var index = ( (c1 << 1) | c0 ) & 0x3;
+                if( index ) {
+                    var attributeByte = this.mmu.readVRAM( (attributeTableAddress | (this.regs[6] & 0xc00) | ATTRIBUTE_LOCK[this.regs[6] & 0x3ff]) & 0xffff );
+                    attributeByte &= ATTRIBUTE_MASK[ this.regs[6] & 0x3ff ];
+                    attributeByte >>= ATTRIBUTE_SHIFT[ this.regs[6] & 0x3ff ];
+                    index |= ( attributeByte << 2 ) & 0xf;
+                }
                 this.screenBuffer.push( this.mmu.readVRAM((0x3f00 | index) & 0xffff) );
             }
 
