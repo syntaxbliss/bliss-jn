@@ -375,12 +375,16 @@ BlissJN.NES.prototype = {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.NES.MMU = function( data ) {
-    this.rom  = [];
-    this.vram = [];
-    this.sram = [];
+    this.rom      = [];
+    this.patterns = [];
+    this.names    = [ [], [], [], [] ];
+    this.sram     = [];
     for( var i = 0; i < 0x10000; i++ ) this.rom.push( 0x00 );
-    for( var i = 0; i < 0x4000; i++ ) this.vram.push( 0x00 );
+    for( var i = 0; i < 0x2000; i++ ) this.patterns.push( 0x00 );
     for( var i = 0; i < 0x100; i++ ) this.sram.push( 0x00 );
+    for( var i = 0; i < 4; i++ ) {
+        for( var j = 0; j < 0x400; j++ ) this.names[ i ].push( 0x00 );
+    }
     this.ppu = new BlissJN.NES.PPU( this );
     this.allocate( data );
 }
@@ -396,7 +400,7 @@ BlissJN.NES.MMU.prototype = {
         } else {
             throw "error: demasiados bancos de memoria PRG-ROM";
         }
-        for( var i = 0; i < 0x2000; i++ ) this.vram[ i ] = data[ 16 + index++ ];
+        for( var i = 0; i < 0x2000; i++ ) this.patterns[ i ] = data[ 16 + index++ ];
         this.ppu.setMirroring( data[6] );
     },
 
@@ -433,7 +437,8 @@ BlissJN.NES.MMU.prototype = {
         // sprite dma
         else if( address === 0x4014 ) {
             var r = ( value << 8 ) & 0xffff;
-            for( var i = 0; i < 0x100; i++ ) this.sram[ i ] = this.vram[ (r + i) & 0xfff ];
+            // TODO: sprites
+            //for( var i = 0; i < 0x100; i++ ) this.sram[ i ] = this.vram[ (r + i) & 0xfff ];
         }
 
         // fallback
@@ -441,15 +446,35 @@ BlissJN.NES.MMU.prototype = {
     },
 
     readVRAM : function( address ) {
-        return this.vram[ address ];
+        // pattern tables
+        if( address < 0x2000 ) return this.patterns[ address ];
+
+        // name tables
+        else if( address < 0x4000 ) {
+            var index = ( (address & 0xc00) >> 10 ) & 0x3;
+            return this.names[ index ][ address & 0x3ff ];
+        }
+
+        // FIXME
+        throw "error: VRAM READ @ " + address.toHex(4);
     },
 
     writeVRAM : function( address, value ) {
-        this.vram[ address ] = value;
+        // pattern tables
+        if( address < 0x2000 ) this.patterns[ address ] = value;
+
+        // name tables
+        else if( address < 0x4000 ) {
+            var index = ( (address & 0xc00) >> 10 ) & 0x3;
+            this.names[ index ][ address & 0x3ff ] = value;
+        }
     },
 
     getVRAM : function() {
-        return this.vram;
+        var r = [];
+        this.patterns.forEach( function(i) { r.push(i) });
+        this.names.forEach( function(i) { r.push(i) });
+        return r;
     }
 }
 
