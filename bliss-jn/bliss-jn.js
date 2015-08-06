@@ -247,7 +247,7 @@ var OPCODE_CYCLES = [
 
 BlissJN = function( args ) {
     this.target = args.target;
-    this.nes    = new BlissJN.NES( args.gameData, args.target, args.patternsViewer, args.namesViewer );
+    this.nes    = new BlissJN.NES( args.gameData, args.target, args.patternsViewer, args.namesViewer, args.oamViewer );
     this.initialize();
 }
 
@@ -266,8 +266,8 @@ BlissJN.prototype = {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlissJN.NES = function( data, target, patternsViewer,namesViewer ) {
-    this.mmu            = new BlissJN.NES.MMU( data );
+BlissJN.NES = function( data, target, patternsViewer, namesViewer, oamViewer ) {
+    this.mmu            = new BlissJN.NES.MMU( data, oamViewer );
     this.m6502          = new BlissJN.NES.M6502( this.mmu, target );
     this.target         = target;
     this.patternsViewer = patternsViewer;
@@ -287,8 +287,8 @@ BlissJN.NES.prototype = {
         this.fps = setInterval( function() {
             self.runFrame();
             self.renderFrame();
-            self.debugPatternTables();
-            self.debugNameTables();
+            // self.debugPatternTables();
+            // self.debugNameTables();
         }, 1000 / FPS_LIMIT );
     },
 
@@ -427,7 +427,7 @@ BlissJN.NES.prototype = {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlissJN.NES.MMU = function( data ) {
+BlissJN.NES.MMU = function( data, oamViewer ) {
     this.rom      = [];
     this.patterns = [];
     this.names    = [ [], [], [], [] ];
@@ -438,7 +438,7 @@ BlissJN.NES.MMU = function( data ) {
     for( var i = 0; i < 4; i++ ) {
         for( var j = 0; j < 0x400; j++ ) this.names[ i ].push( 0x00 );
     }
-    this.ppu = new BlissJN.NES.PPU( this );
+    this.ppu = new BlissJN.NES.PPU( this, oamViewer );
     this.allocate( data );
 }
 
@@ -490,7 +490,11 @@ BlissJN.NES.MMU.prototype = {
         // sprite dma
         else if( address === 0x4014 ) {
             var r = ( value << 8 ) & 0xffff;
-            for( var i = 0; i < 0x100; i++ ) this.sram[ i ] = this.readVRAM( (r + i) & 0xfff );
+            // FIXME
+            // for( var i = 0; i < 0x100; i++ ) this.sram[ i ] = this.readVRAM( (r + i) & 0xffff );
+            // for( var i = 0; i < 0x100; i++ ) this.sram[ (this.ppu.regs[3] + i) & 0xff ] = this.readVRAM( (r + i) & 0xffff );
+            // for( var i = this.ppu.regs[3]; i < 0x100; i++ ) this.sram[ i ] = this.readVRAM( (r + i) & 0xffff );
+            for( var i = this.ppu.regs[3]; i < 0x100; i++ ) this.sram[ i ] = this.readByte( (r + i) & 0xffff );
         }
 
         // fallback
@@ -528,6 +532,18 @@ BlissJN.NES.MMU.prototype = {
         else throw "error: VRAM WRITE @ " + address.toHex(4);
     },
 
+    readSRAM : function( address ) {
+        return this.sram[ address ];
+    },
+
+    writeSRAM : function( address, value ) {
+        this.sram[ address ] = value;
+    },
+
+    getSRAM : function() {
+        return this.sram;
+    },
+
     getPatternTables : function() {
         return this.patterns;
     },
@@ -543,7 +559,7 @@ BlissJN.NES.MMU.prototype = {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlissJN.NES.PPU = function( mmu ) {
+BlissJN.NES.PPU = function( mmu, oamViewer ) {
     this.mmu          = mmu;
     this.regs         = { 0 : 0, 1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0, 6 : 0, 7 : 0 };
     this.loopyT       = 0;
@@ -554,11 +570,12 @@ BlissJN.NES.PPU = function( mmu ) {
     this.scanline     = 0;
     this.pendingNMI   = false;
     this.screenBuffer = [];
+    this.oamViewer    = oamViewer;
 }
 
 BlissJN.NES.PPU.prototype = {
     getActivePatternAddress : function() {
-        return ( (this.regs[0] & 0x10) === 0x10 ? 0x1000 : 0x000 );
+        return ( (this.regs[0] & 0x10) === 0x10 ? 0x1000 : 0x0 );
     },
 
     setMirroring : function( value ) {
@@ -603,7 +620,9 @@ BlissJN.NES.PPU.prototype = {
 
             case 4: {
                 var r = this.mmu.readSRAM( this.regs[3] );
-                if( this.isRendering() ) this.regs[3]++;
+                // FIXME
+                // if( this.isRendering() ) this.regs[3] = ( this.regs[3] + 1 ) & 0xff;
+                return r;
             } break;
 
             case 7: {
@@ -649,7 +668,7 @@ BlissJN.NES.PPU.prototype = {
 
             case 4: {
                 this.mmu.writeSRAM( this.regs[3], value );
-                this.regs[3]++;
+                this.regs[3] = ( this.regs[3] + 1 ) & 0xff;
             } break;
 
             case 5: {
@@ -750,7 +769,11 @@ BlissJN.NES.PPU.prototype = {
             if( this.backgroundEnabled() ) {
                 this.regs[6] &= 0xfbe0;
                 this.regs[6] |= ( this.loopyT & 0x041f );
+
+                this.drawSprites( false );
                 this.drawBackground();
+                this.drawSprites( true );
+
                 if( (this.regs[6] & 0x7000) === 0x7000 ) {
                     var t = ( this.regs[6] & 0x03e0 );
                     this.regs[6] &= 0xfff;
@@ -798,10 +821,59 @@ BlissJN.NES.PPU.prototype = {
                     attributeByte >>= ATTRIBUTE_SHIFT[ this.regs[6] & 0x3ff ];
                     index |= ( attributeByte << 2 ) & 0xf;
                 }
-                this.screenBuffer.push( this.mmu.readVRAM((0x3f00 | index) & 0xffff) );
+                this.screenBuffer[ (this.scanline - 1) * 256 + tile * 8 + (7 - bit) ] = ( this.mmu.readVRAM((0x3f00 | index) & 0xffff) );
             }
 
             if( (this.regs[6] & 0x1f) === 0x1f ) this.regs[6] ^= 0x41f; else this.regs[6]++;
+        }
+    },
+
+    drawSprites : function( priority ) {
+        var counter = 0, sram = this.mmu.getSRAM(), size = ( (this.regs[0] & 0x20) === 0x20 ? 16 : 8 );
+        var pattern = ( (this.regs[0] & 0x8) === 0x8 ? 0x1000 : 0x0 );
+
+        this.regs[ 2 ] &= ~0x20;
+
+        for( var sprite = 0; sprite < 64; sprite++ ) {
+            var bytes = sram.slice( sprite * 4, sprite * 4 + 4 );
+
+            var range = this.scanline - 20 - bytes[ 0 ] + size;
+            if( (range >= 0) && (range <= 7) && (((bytes[2] & 0x20) === 0x20) === priority) ) {
+                counter++;
+                if( counter > 8 ) this.regs[ 2 ] |= 0x20;
+                // FIXME: implementar rendering de sprites de 8x16
+                if( size === 8 ) {
+                    var line    = ( this.scanline + 1 ) % 8;
+                    var address = ( pattern | (bytes[1] << 4) | ((bytes[2] & 0x80) === 0x80 ? 7 - line : line) ) & 0xffff;
+                    var l = this.mmu.readVRAM( address ), h = this.mmu.readVRAM( (address | 8) & 0xffff );
+
+                    if( (bytes[2] & 0x40) !== 0x40 ) {
+                        for( var bit = 7; bit >= 0; bit-- ) {
+                            var c0 = ( l >> bit ) & 0x1;
+                            var c1 = ( h >> bit ) & 0x1;
+                            var index = ( (c1 << 1) | c0 ) & 0x3;
+                            if( index ) {
+                                index |= ( (bytes[2] & 0x3) << 2 ) & 0xf;
+                                var coord = ( bytes[0] + line ) * 256 + bytes[ 3 ];
+                                if( coord < 256 * 240 ) this.screenBuffer[ coord ] = this.mmu.readVRAM( (0x3f10 | index) & 0xffff );
+                            }
+                            bytes[ 3 ] = ( bytes[3] + 1 ) & 0xff;
+                        }
+                    } else {
+                        for( var bit = 0; bit < 8; bit++ ) {
+                            var c0 = ( l >> bit ) & 0x1;
+                            var c1 = ( h >> bit ) & 0x1;
+                            var index = ( (c1 << 1) | c0 ) & 0x3;
+                            if( index ) {
+                                index |= ( (bytes[2] & 0x3) << 2 ) & 0xf;
+                                var coord = ( bytes[0] + line ) * 256 + bytes[ 3 ];
+                                if( coord < 256 * 240 ) this.screenBuffer[ coord ] = this.mmu.readVRAM( (0x3f10 | index) & 0xffff );
+                            }
+                            bytes[ 3 ] = ( bytes[3] + 1 ) & 0xff;
+                        }
+                    }
+                }
+            }
         }
     }
 }
