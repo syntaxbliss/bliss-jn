@@ -18,6 +18,7 @@ String.prototype.toLength = function( size, separator ) {
 
 var configuration = {
   nestestMode: true,
+  debugMode: true,
   running: false,
   fps: 60
 };
@@ -34,7 +35,13 @@ BlissJN = function( args ) {
     vram: [],
     sram: []
   };
-  this.dbg   = new BlissJN.Debugger( args.traceFrame );
+
+  this.dbg   = new BlissJN.Debugger({
+    memory: this.memoryHandler(),
+    stackTrace: args.stackTrace,
+    patternTables: args.patternTables
+  });
+
   this.m6502 = new BlissJN.M6502( this.memoryHandler(), this.dbg );
 
   this.options = args;
@@ -88,6 +95,9 @@ BlissJN.prototype.run = function() {
       clearInterval( fn );
       return;
     }
+
+    if( configuration.debugMode ) self.dbg.showPatternTables();
+
     self.step();
   }, Math.floor(1000 / configuration.fps));
 };
@@ -110,6 +120,10 @@ BlissJN.prototype.memoryHandler = function() {
 
     writeRam: function( address, value ) {
       self.memory.ram[ address ] = value;
+    },
+
+    readVram: function( address ) {
+      return self.memory.vram[ address ];
     }
   };
 };
