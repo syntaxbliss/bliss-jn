@@ -1,0 +1,14 @@
+html { font-size: 1em; }
+
+#trace-frame {
+    margin: 9px 8px;
+}
+
+#trace-frame pre {
+    display: block;
+    font-family: monospace;
+    margin: 2px 0px;
+    white-space: pre-wrap;
+    white-space: pre;
+    word-wrap: break-word;
+}
