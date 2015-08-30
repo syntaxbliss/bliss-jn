@@ -1,8 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.Debugger = function( target ) {
-  this.context = null;
-  this.target = $( target );
+  this.context    = null;
+  this.timeBase   = 3;
+  this.totalTicks = 0;
+  this.target     = $( target );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -13,7 +15,8 @@ BlissJN.Debugger.prototype.trace = function( context, opcode ) {
     + opcode.toHex(2).toLength(3)
     + this.operands( opcode ).toLength(7)
     + this.explain( opcode ).toLength(32)
-    + this.status();
+    + this.status().toLength(26)
+    + this.ticks( opcode ).toLength(7);
 
   this.output( str );
 };
@@ -157,6 +160,22 @@ BlissJN.Debugger.prototype.output = function( str ) {
   var p = document.createElement('pre');
   p.innerHTML = str;
   this.target.appendChild( p );
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlissJN.Debugger.prototype.ticks = function( opcode ) {
+  var r = 'CYC:'
+
+  this.totalTicks += this.context.ticks * this.timeBase;
+  if( this.totalTicks >= 341 ) this.totalTicks -= 341;
+
+  var count = this.totalTicks.toString();
+  while( count.length < 3 ) count = ' ' + count;
+  r += count;
+
+
+  return r;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

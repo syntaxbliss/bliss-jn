@@ -93,23 +93,23 @@ var opcodeInfo = {
   ],
 
   ticks: [
-  //         0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f
-  /* 0 */ null,    6, null, null, null,    3,    5, null,    3,    2,    2, null, null,    4,    6, null,
-  /* 1 */    2,    5, null, null, null,    4,    6, null,    2,    4, null, null, null,    4,    7, null,
-  /* 2 */    6,    6, null, null,    3,    3,    5, null,    4,    2,    2, null,    4,    4,    6, null,
-  /* 3 */    2,    5, null, null, null,    4,    6, null,    2,    4, null, null, null,    4,    7, null,
-  /* 4 */    6,    6, null, null,    3,    3,    5, null, null,    2,    2, null,   3,     4,    6, null,
-  /* 5 */    2,    5, null, null, null,    4,    6, null, null,    4, null, null, null,    4,    7, null,
-  /* 6 */    6,    6, null, null, null,    3, null, null,    4,    2, null, null,    5,    4, null, null,
-  /* 7 */    2,    5, null,    3, null,    4, null, null,    2,    4, null, null, null,    4, null, null,
-  /* 8 */ null,    6,    2,    3,    3, null, null, null, null, null,    2, null,    4,    4,    4, null,
-  /* 9 */    2,    6, null,    4,    4, null, null, null,    2,    5,    2, null, null,    5, null, null,
-  /* a */    2, null,    2, null,    3,    3,    3, null,    2,    2,    2, null,    4,    4,    4, null,
-  /* b */    2,    6, null, null,    4,    4,    4, null,    2,    4,    2, null,    4,    4,    4, null,
-  /* c */    2,    6, null, null,    3,    3,    5, null,    2,    2,    2, null,    4,    4,    6, null,
-  /* d */    2,    5, null, null, null,    4,    6, null,    2,    4, null, null, null,    4,    7, null,
-  /* e */    2,    6, null, null,    3,    3,    5, null,    2,    2,    2, null,    4,    4,    6, null,
-  /* f */    2,    5, null, null, null,    4,    6, null,    2,    4, null, null, null,    4,    7, null
+  //      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+  /* 0 */ 0, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0,
+  /* 1 */ 2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+  /* 2 */ 6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0,
+  /* 3 */ 2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+  /* 4 */ 6, 6, 0, 0, 3, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0,
+  /* 5 */ 2, 5, 0, 0, 0, 4, 6, 0, 0, 4, 0, 0, 0, 4, 7, 0,
+  /* 6 */ 6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0,
+  /* 7 */ 2, 5, 0, 3, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+  /* 8 */ 0, 6, 2, 3, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,
+  /* 9 */ 2, 6, 0, 4, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0,
+  /* a */ 2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,
+  /* b */ 2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,
+  /* c */ 2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,
+  /* d */ 2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+  /* e */ 2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,
+  /* f */ 2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0
   ]
 };
 
@@ -170,11 +170,11 @@ BlissJN.M6502.prototype.fetch = function() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.execute = function( opcode ) {
-  var ticks = 0;
-
   if( configuration.nestestMode ) {
     this.dbg.trace( this, opcode );
   }
+
+  this.ticks = 0;
 
   var mode = opcodeInfo.mode[ opcode ];
   switch( opcode ) {
@@ -266,7 +266,14 @@ BlissJN.M6502.prototype.execute = function( opcode ) {
     } break;
   }
 
-  return ticks;
+  var t = opcodeInfo.ticks[ opcode ];
+  if( ! t ) {
+    configuration.running = false;
+    throw 'clock cycles not implemented';
+  }
+  this.ticks += t;
+
+  return this.ticks;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
