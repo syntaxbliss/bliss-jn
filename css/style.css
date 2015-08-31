@@ -1,6 +1,19 @@
 html { font-size: 1em; }
-body { font-family: 'Arial', sans-serif; }
+body { font-family: 'Arial', sans-serif; background-color: #f0f0f0; }
 
+.views { overflow: hidden; }
+.panel {
+    box-sizing: border-box;
+    padding: 8px;
+    text-align: center;
+}
+.panel canvas {
+    background-color: white;
+    border-radius: 3px;
+    border: solid 1px #c0c0c0;
+    padding: 5px;
+}
+.top-panel { width: 33.33333%; float: left; }
 .section-title {
     border-bottom: solid 1px #c0c0c0;
     color: black;   
@@ -11,24 +24,8 @@ body { font-family: 'Arial', sans-serif; }
     text-align: left;
     text-transform: uppercase;
 }
-.panel {
-    background-color: #f6f6f6;
-    box-sizing: border-box;
-    padding: 8px;
-    width: 50%;
-    text-align: center;
-}
-.panel canvas {
-    background-color: white;
-    border-radius: 3px;
-    border: solid 1px #c0c0c0;
-    padding: 5px;
-}
-.emulator-viewer, .pattern-tables-viewer { float: right; clear: right; }
 
-#stack-trace {
-    float: left;
-}
+#stack-trace { text-align: left; position: relative; }
 #stack-trace pre {
     display: block;
     font-family: monospace;
@@ -36,4 +33,19 @@ body { font-family: 'Arial', sans-serif; }
     white-space: pre-wrap;
     white-space: pre;
     word-wrap: break-word;
+}
+#stack-trace ul {
+    margin: 8px;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+#stack-trace li { float: right; margin-left: 8px; }
+#stack-trace button {
+    background-color: #cc181e;
+    border-radius: 3px;
+    border: none;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
 }

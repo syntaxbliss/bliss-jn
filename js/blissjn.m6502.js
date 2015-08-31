@@ -139,8 +139,8 @@ BlissJN.M6502.prototype.reset = function() {
   if( configuration.nestestMode ) {
     this.pc = 0xc000;
   } else {
-    var l = this.memory.readRam( 0xfffc );
-    var h = this.memory.readRam( 0xfffd );
+    var l = this.memory.readMemory( 0xfffc );
+    var h = this.memory.readMemory( 0xfffd );
     this.pc = ( (h << 8) | l ) & 0xffff;
   }
 };
@@ -154,7 +154,7 @@ BlissJN.M6502.prototype.triggerInterrupt = function( name ) {
       this.stackPush( this.pc & 0xff );
       this.stackPush( (this.status | 0x20) & 0xff );
       this.status |= FLAG_I;
-      var l = this.memory.readRam( 0xfffa ), h = this.memory.readRam( 0xfffb );
+      var l = this.memory.readMemory( 0xfffa ), h = this.memory.readMemory( 0xfffb );
       this.pc = ( (h << 8) | l ) & 0xffff;
     } break;
 
@@ -168,7 +168,7 @@ BlissJN.M6502.prototype.triggerInterrupt = function( name ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.stackPush = function( value ) {
-  this.memory.writeRam( (this.sp | 0x100) & 0xffff, value );
+  this.memory.writeMemory( (this.sp | 0x100) & 0xffff, value );
   this.sp = ( this.sp - 1 ) & 0xff;
 };
 
@@ -176,7 +176,7 @@ BlissJN.M6502.prototype.stackPush = function( value ) {
 
 BlissJN.M6502.prototype.stackPop = function() {
   this.sp = ( this.sp + 1 ) & 0xff;
-  return this.memory.readRam( (this.sp | 0x100) & 0xffff );
+  return this.memory.readMemory( (this.sp | 0x100) & 0xffff );
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,13 +184,13 @@ BlissJN.M6502.prototype.stackPop = function() {
 BlissJN.M6502.prototype.fetch = function() {
   var t = this.pc;
   this.pc = ( this.pc + 1 ) & 0xffff;
-  return this.memory.readRam( t );
+  return this.memory.readMemory( t );
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.execute = function( opcode ) {
-  if( configuration.nestestMode ) this.dbg.trace( this, opcode );
+  if( configuration.logTrace ) this.dbg.trace( this, opcode );
   this.ticks = 0;
 
   var mode = opcodeInfo.mode[ opcode ];
@@ -323,19 +323,19 @@ BlissJN.M6502.prototype.getAddress = function( mode ) {
 
     case IND: {
       var r1  = this.fetch(), r2 = this.fetch();
-      var l   = this.memory.readRam( ((r2 << 8) | r1) & 0xffff ), h = this.memory.readRam( ((r2 << 8) | ((r1 + 1) & 0xff)) & 0xffff );
+      var l   = this.memory.readMemory( ((r2 << 8) | r1) & 0xffff ), h = this.memory.readMemory( ((r2 << 8) | ((r1 + 1) & 0xff)) & 0xffff );
       address = ( (h << 8) | l ) & 0xffff;
     } break;
 
     case INX: {
       var r   = ( this.fetch() + this.x ) & 0xff;
-      var l   = this.memory.readRam( r ), h = this.memory.readRam( (r + 1) & 0xff );
+      var l   = this.memory.readMemory( r ), h = this.memory.readMemory( (r + 1) & 0xff );
       address = ( (h << 8) | l ) & 0xffff;
     } break;
 
     case INY: case IYN: {
       var r   = this.fetch();
-      var l   = this.memory.readRam( r ), h = this.memory.readRam( (r + 1) & 0xff );
+      var l   = this.memory.readMemory( r ), h = this.memory.readMemory( (r + 1) & 0xff );
       address = ( ((h << 8) | l) + this.y ) & 0xffff;
       if( (mode === INY) && (l + this.y > 0xff) ) this.ticks++;
     } break;
@@ -364,7 +364,7 @@ BlissJN.M6502.prototype.getAddress = function( mode ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.addWithCarry = function( mode ) {
-  var src   = this.memory.readRam( this.getAddress(mode) );
+  var src   = this.memory.readMemory( this.getAddress(mode) );
   var carry = ( (this.status & FLAG_C) === FLAG_C ) ? 1 : 0;
   var t     = ( this.a + src + carry ) & 0xffff;
   this.status &= ~( FLAG_C | FLAG_Z | FLAG_V | FLAG_N );
@@ -393,7 +393,7 @@ BlissJN.M6502.prototype.branch = function( flag, value ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.compare = function( mode, reg ) {
-  var t = this.memory.readRam( this.getAddress(mode) );
+  var t = this.memory.readMemory( this.getAddress(mode) );
   this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
   if( this[reg] >= t ) this.status |= FLAG_C;
   t = ( this[reg] - t ) & 0xff;
@@ -404,10 +404,10 @@ BlissJN.M6502.prototype.compare = function( mode, reg ) {
 
 BlissJN.M6502.prototype.decrementMemory = function( mode ) {
   var address = this.getAddress( mode );
-  var t       = ( this.memory.readRam(address) - 1 ) & 0xff;
+  var t       = ( this.memory.readMemory(address) - 1 ) & 0xff;
   this.status &= ~( FLAG_Z | FLAG_N );
   this.status |= ZN[ t ];
-  this.memory.writeRam( address, t );
+  this.memory.writeMemory( address, t );
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -434,10 +434,10 @@ BlissJN.M6502.prototype.flagSet = function( flag ) {
 
 BlissJN.M6502.prototype.incrementMemory = function( mode ) {
   var address = this.getAddress( mode );
-  var t       = ( this.memory.readRam(address) + 1 ) & 0xff;
+  var t       = ( this.memory.readMemory(address) + 1 ) & 0xff;
   this.status &= ~( FLAG_Z | FLAG_N );
   this.status |= ZN[ t ];
-  this.memory.writeRam( address, t );
+  this.memory.writeMemory( address, t );
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -467,7 +467,7 @@ BlissJN.M6502.prototype.jumpSubroutine = function( mode ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.load = function( mode, reg ) {
-  this[ reg ] = this.memory.readRam( this.getAddress(mode) );
+  this[ reg ] = this.memory.readMemory( this.getAddress(mode) );
   this.status &= ~( FLAG_Z | FLAG_N );
   this.status |= ZN[ this[reg] ];
 };
@@ -475,7 +475,7 @@ BlissJN.M6502.prototype.load = function( mode, reg ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.logicalAnd = function( mode ) {
-  this.a &= this.memory.readRam( this.getAddress(mode) );
+  this.a &= this.memory.readMemory( this.getAddress(mode) );
   this.status &= ~( FLAG_Z | FLAG_N );
   this.status |= ZN[ this.a ];
 };
@@ -483,7 +483,7 @@ BlissJN.M6502.prototype.logicalAnd = function( mode ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.logicalOr = function( mode ) {
-  this.a |= this.memory.readRam( this.getAddress(mode) );
+  this.a |= this.memory.readMemory( this.getAddress(mode) );
   this.status &= ~( FLAG_Z | FLAG_N );
   this.status |= ZN[ this.a ];
 };
@@ -491,7 +491,7 @@ BlissJN.M6502.prototype.logicalOr = function( mode ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.logicalXor = function( mode ) {
-  this.a ^= this.memory.readRam( this.getAddress(mode) );
+  this.a ^= this.memory.readMemory( this.getAddress(mode) );
   this.status &= ~( FLAG_Z | FLAG_N );
   this.status |= ZN[ this.a ];
 };
@@ -547,66 +547,66 @@ BlissJN.M6502.prototype.returnSubroutine = function() {
 
 BlissJN.M6502.prototype.rotateLeft = function( mode ) {
   var address  = ( (mode !== ACC) ? this.getAddress(mode) : null );
-  var t        = ( (mode !== ACC) ? this.memory.readRam(address) : this.a );
+  var t        = ( (mode !== ACC) ? this.memory.readMemory(address) : this.a );
   var oldCarry = ( (this.status & FLAG_C) === FLAG_C ? 0x1 : 0 );
   var newCarry = ( (t & 0x80) === 0x80 ? true : false );
   this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
   if( newCarry ) this.status |= FLAG_C;
   t = ( ((t << 1) & 0xfe) | oldCarry ) & 0xff;
   this.status |= ZN [ t ];
-  if( mode !== ACC ) this.memory.writeRam( address, t ); else this.a = t;
+  if( mode !== ACC ) this.memory.writeMemory( address, t ); else this.a = t;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.rotateRight = function( mode ) {
   var address  = ( (mode !== ACC) ? this.getAddress(mode) : null );
-  var t        = ( (mode !== ACC) ? this.memory.readRam(address) : this.a );
+  var t        = ( (mode !== ACC) ? this.memory.readMemory(address) : this.a );
   var oldCarry = ( (this.status & FLAG_C) === FLAG_C ? 0x80 : 0 );
   var newCarry = ( (t & 0x1) === 0x1 ? true : false );
   this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
   if( newCarry ) this.status |= FLAG_C;
   t = ( ((t >> 1) & 0x7f) | oldCarry ) & 0xff;
   this.status |= ZN [ t ];
-  if( mode !== ACC ) this.memory.writeRam( address, t ); else this.a = t;
+  if( mode !== ACC ) this.memory.writeMemory( address, t ); else this.a = t;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.shiftLeft = function( mode ) {
   var address  = ( (mode !== ACC) ? this.getAddress(mode) : null );
-  var t        = ( (mode !== ACC) ? this.memory.readRam(address) : this.a );
+  var t        = ( (mode !== ACC) ? this.memory.readMemory(address) : this.a );
   var newCarry = ( (t & 0x80) === 0x80 ? true : false );
   this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
   if( newCarry ) this.status |= FLAG_C;
   t = ( t << 1 ) & 0xfe;
   this.status |= ZN[ t ];
-  if( mode !== ACC ) this.memory.writeRam( address, t ); else this.a = t;
+  if( mode !== ACC ) this.memory.writeMemory( address, t ); else this.a = t;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.shiftRight = function( mode ) {
   var address  = ( (mode !== ACC) ? this.getAddress(mode) : null );
-  var t        = ( (mode !== ACC) ? this.memory.readRam(address) : this.a );
+  var t        = ( (mode !== ACC) ? this.memory.readMemory(address) : this.a );
   var newCarry = ( (t & 0x1) === 0x1 ? true : false );
   this.status &= ~( FLAG_C | FLAG_Z | FLAG_N );
   if( newCarry ) this.status |= FLAG_C;
   t = ( t >> 1 ) & 0x7f;
   this.status |= ZN[ t ];
-  if( mode !== ACC ) this.memory.writeRam( address, t ); else this.a = t;
+  if( mode !== ACC ) this.memory.writeMemory( address, t ); else this.a = t;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.store = function( mode, reg ) {
-  this.memory.writeRam( this.getAddress(mode), this[reg] );
+  this.memory.writeMemory( this.getAddress(mode), this[reg] );
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.subtractWithCarry = function( mode ) {
-  var src   = this.memory.readRam( this.getAddress(mode) );
+  var src   = this.memory.readMemory( this.getAddress(mode) );
   var carry = ( (this.status & FLAG_C) !== FLAG_C ) ? 1 : 0;
   var t     = ( this.a - src - carry ) & 0xffff;
   this.status &= ~( FLAG_C | FLAG_Z | FLAG_V | FLAG_N );
@@ -622,7 +622,7 @@ BlissJN.M6502.prototype.subtractWithCarry = function( mode ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.testBits = function( mode ) {
-  var t = this.memory.readRam( this.getAddress(mode) );
+  var t = this.memory.readMemory( this.getAddress(mode) );
   this.status &= ~( FLAG_Z | FLAG_V | FLAG_N );
   if( (this.a & t) === 0 ) this.status |= FLAG_Z;
   this.status |= ( t & (FLAG_N | FLAG_V) );
