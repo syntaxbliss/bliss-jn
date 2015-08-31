@@ -15,12 +15,12 @@
         <h2 class="section-title">Stack trace</h2>
     </div>
 
-    <div class="panel">
+    <div class="panel emulator-viewer">
         <h2 class="section-title">Emulator</h2>
         <canvas id="emulator-viewer" width="256" height="128"></canvas>
     </div>
 
-    <div class="panel">
+    <div class="panel pattern-tables-viewer">
         <h2 class="section-title">Pattern tables</h2>
         <canvas id="pattern-tables-viewer" width="256" height="128"></canvas>
     </div>
@@ -28,6 +28,7 @@
     <script type="text/javascript" src="js/blissjn.js"></script>
     <script type="text/javascript" src="js/blissjn.m6502.js"></script>
     <script type="text/javascript" src="js/blissjn.debugger.js"></script>
+    <script type="text/javascript" src="js/blissjn.ppu.js"></script>
     <script type="text/javascript">
         window.addEventListener('load', function() {
             var emulator = new BlissJN({

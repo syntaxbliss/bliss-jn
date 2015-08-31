@@ -147,6 +147,26 @@ BlissJN.M6502.prototype.reset = function() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+BlissJN.M6502.prototype.triggerInterrupt = function( name ) {
+  switch( name ) {
+    case interrupt.nmi: { // NMI
+      this.stackPush( (this.pc >> 8) & 0xff );
+      this.stackPush( this.pc & 0xff );
+      this.stackPush( (this.status | 0x20) & 0xff );
+      this.status |= FLAG_I;
+      var l = this.memory.readRam( 0xfffa ), h = this.memory.readRam( 0xfffb );
+      this.pc = ( (h << 8) | l ) & 0xffff;
+    } break;
+
+    default: {
+      configuration.running = false;
+      throw 'invalid interrupt < @' + name + ' >';
+    } break;
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 BlissJN.M6502.prototype.stackPush = function( value ) {
   this.memory.writeRam( (this.sp | 0x100) & 0xffff, value );
   this.sp = ( this.sp - 1 ) & 0xff;
@@ -170,10 +190,7 @@ BlissJN.M6502.prototype.fetch = function() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BlissJN.M6502.prototype.execute = function( opcode ) {
-  if( configuration.nestestMode ) {
-    this.dbg.trace( this, opcode );
-  }
-
+  if( configuration.nestestMode ) this.dbg.trace( this, opcode );
   this.ticks = 0;
 
   var mode = opcodeInfo.mode[ opcode ];

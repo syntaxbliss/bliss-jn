@@ -13,9 +13,7 @@ body { font-family: 'Arial', sans-serif; }
 }
 .panel {
     background-color: #f6f6f6;
-    border-bottom: solid 1px #c0c0c0;
     box-sizing: border-box;
-    float: left;
     padding: 8px;
     width: 50%;
     text-align: center;
@@ -26,9 +24,10 @@ body { font-family: 'Arial', sans-serif; }
     border: solid 1px #c0c0c0;
     padding: 5px;
 }
+.emulator-viewer, .pattern-tables-viewer { float: right; clear: right; }
 
 #stack-trace {
-    border-right: solid 1px #c0c0c0;
+    float: left;
 }
 #stack-trace pre {
     display: block;
